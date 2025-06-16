@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import { Booking } from '../types';
 
 // Safe access to environment variable for Vite
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8088';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 interface BookingState {
   bookings: Booking[];
@@ -23,7 +23,7 @@ export const useBookingStore = create<BookingState>((set) => ({
   fetchUserBookings: async (userId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get<{ bookings: Booking[] }>(`${API_BASE_URL}/api/bookings/user/${userId}`, {
+      const response = await axios.get<{ bookings: Booking[] }>(`${API_BASE_URL}/bookings/user/${userId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       set({ bookings: response.data.bookings, isLoading: false });
@@ -37,7 +37,7 @@ export const useBookingStore = create<BookingState>((set) => ({
   fetchAllBookings: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get<{ bookings: Booking[] }>(`${API_BASE_URL}/api/admin/bookings`, {
+      const response = await axios.get<{ bookings: Booking[] }>(`${API_BASE_URL}/admin/bookings`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       set({ bookings: response.data.bookings, isLoading: false });
@@ -51,7 +51,7 @@ export const useBookingStore = create<BookingState>((set) => ({
   createBooking: async (bookingData: Omit<Booking, 'id' | 'createdAt'>) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post<{ booking: Booking }>(`${API_BASE_URL}/api/bookings`, bookingData, {
+      const response = await axios.post<{ booking: Booking }>(`${API_BASE_URL}/bookings`, bookingData, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
