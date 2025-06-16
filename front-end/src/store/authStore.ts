@@ -47,7 +47,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post<{ user: User; token: string }>(`${import.meta.env.VITE_API_URL}/api/login`, { email, password });
+      const response = await axios.post<{ user: User; token: string }>(`${import.meta.env.VITE_API_URL}/login`, { email, password });
       const { user, token } = response.data;
       storage.setUser(user);
       storage.setToken(token);
@@ -65,7 +65,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signup: async (name: string, email: string, password: string, phone?: string, avatar?: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post<{ user: User; token: string }>(`${import.meta.env.VITE_API_URL}/api/signup`, { name, email, password, phone, avatar });
+      const response = await axios.post<{ user: User; token: string }>(`${import.meta.env.VITE_API_URL}/signup`, { name, email, password, phone, avatar });
       const { user, token } = response.data;
       storage.setUser(user);
       storage.setToken(token);
@@ -90,8 +90,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const token = storage.getToken();
-      console.log('API Request to:', `${import.meta.env.VITE_API_URL}/api/user`, 'with data:', formData);
-      const response = await axios.put<{ user: User }>(`${import.meta.env.VITE_API_URL}/api/user`, formData, {
+      console.log('API Request to:', `${import.meta.env.VITE_API_URL}/user`, 'with data:', formData);
+      const response = await axios.put<{ user: User }>(`${import.meta.env.VITE_API_URL}/user`, formData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
