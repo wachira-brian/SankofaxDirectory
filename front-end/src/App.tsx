@@ -14,12 +14,12 @@ import NotFoundPage from './pages/NotFoundPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import ProviderDetailPage from './pages/ProviderDetailPage';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8088';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 function App() {
   const fetchAPI = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/providers`);
+      const response = await axios.get(`${API_BASE_URL}/providers`);
       console.log('Providers:', response.data.providers);
     } catch (error: any) {
       console.error('API fetch error:', error.message);
