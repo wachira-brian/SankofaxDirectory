@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8088';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export interface Provider {
 id: string;
@@ -49,7 +49,7 @@ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
 export const providerApi = {
 async fetchCategories(): Promise<Record<string, Category[]>> {
 try {
-    const response = await axios.get(`${API_BASE_URL}/api/categories`, getAuthHeaders());
+    const response = await axios.get(`${API_BASE_URL}/categories`, getAuthHeaders());
     return response.data;
 } catch (error) {
     throw new Error(`Failed to fetch categories: ${(error as AxiosError).message}`);
