@@ -90,7 +90,8 @@ async function initializeDatabase() {
     await connection.query(
       `INSERT IGNORE INTO users (id, name, email, password, role, phone) 
        VALUES (?, ?, ?, ?, ?, ?)`,
-      ['admin2', 'BRIAN WACHIRA', 'branzwacchy12@gmail.com', hashedPassword, 'admin', '+254795373563']
+      ['admin1', 'BRIAN WACHIRA', 'branzwacchy12@gmail.com', hashedPassword, 'admin', '+254795373563'],
+      ['admin2', 'WANGUI MATHARU', 'wanguimatharu@gmail.com', hashedPassword, 'admin', '+12345567890']
     );
 
     await connection.query(`
