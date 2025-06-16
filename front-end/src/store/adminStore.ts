@@ -30,7 +30,7 @@ interface AdminState {
   setFeaturedProvider: (id: string, featured: boolean) => Promise<void>;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8088';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export const useAdminStore = create<AdminState>((set) => ({
   providers: [],
@@ -40,7 +40,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   admins: [],
   fetchProviders: async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/admin/providers`, {
+      const response = await axios.get(`${API_BASE_URL}/admin/providers`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       set({
@@ -53,7 +53,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   },
   fetchOffers: async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/admin/offers`, {
+      const response = await axios.get(`${API_BASE_URL}/admin/offers`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       set({ offers: response.data.offers });
@@ -63,7 +63,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   },
   fetchUserCount: async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/admin/users/count`, {
+      const response = await axios.get(`${API_BASE_URL}/admin/users/count`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       set({ userCount: response.data.count });
@@ -73,7 +73,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   },
   fetchAdmins: async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/admin/admins`, {
+      const response = await axios.get(`${API_BASE_URL}/admin/admins`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       set({ admins: response.data.admins });
@@ -83,7 +83,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   },
   createProvider: async (provider) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/admin/providers`, provider, {
+      const response = await axios.post(`${API_BASE_URL}/admin/providers`, provider, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
@@ -96,7 +96,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   },
   updateProvider: async (id, provider) => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/api/admin/providers/${id}`, provider, {
+      const response = await axios.put(`${API_BASE_URL}/admin/providers/${id}`, provider, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
@@ -109,7 +109,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   },
   deleteProvider: async (id) => {
     try {
-      const response = await axios.delete(`${API_BASE_URL}/api/admin/providers/${id}`, {
+      const response = await axios.delete(`${API_BASE_URL}/admin/providers/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   },
   createOffer: async (offer) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/admin/offers`, offer, {
+      const response = await axios.post(`${API_BASE_URL}/admin/offers`, offer, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   },
   updateOffer: async (id, offer) => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/api/admin/offers/${id}`, offer, {
+      const response = await axios.put(`${API_BASE_URL}/admin/offers/${id}`, offer, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
@@ -148,7 +148,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   },
   deleteOffer: async (id) => {
     try {
-      const response = await axios.delete(`${API_BASE_URL}/api/admin/offers/${id}`, {
+      const response = await axios.delete(`${API_BASE_URL}/admin/offers/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
