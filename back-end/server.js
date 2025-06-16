@@ -24,7 +24,7 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+const JWT_SECRET = process.env.JWT_SECRET;
 const storage = multer.diskStorage({
   destination: './uploads/',
   filename: (req, file, cb) => {
