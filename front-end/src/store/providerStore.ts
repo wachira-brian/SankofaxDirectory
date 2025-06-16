@@ -66,7 +66,7 @@ export const useProviderStore = create<AdminStore>((set, get) => ({
   userCount: 0,
   admins: [],
   fetchProviders: async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/providers`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/providers`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (response.ok) {
@@ -76,7 +76,7 @@ export const useProviderStore = create<AdminStore>((set, get) => ({
     }
   },
   fetchOffers: async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/offers`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/offers`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (response.ok) {
@@ -86,7 +86,7 @@ export const useProviderStore = create<AdminStore>((set, get) => ({
     }
   },
   fetchUserCount: async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users/count`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/users/count`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (response.ok) {
@@ -95,7 +95,7 @@ export const useProviderStore = create<AdminStore>((set, get) => ({
     }
   },
   fetchAdmins: async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/admins`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/admins`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (response.ok) {
@@ -104,7 +104,7 @@ export const useProviderStore = create<AdminStore>((set, get) => ({
     }
   },
   createProvider: async (provider: FormData) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/providers`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/providers`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: provider,
@@ -112,7 +112,7 @@ export const useProviderStore = create<AdminStore>((set, get) => ({
     if (!response.ok) throw new Error('Failed to create provider');
   },
   updateProvider: async (id: string, provider: FormData) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/providers/${id}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/providers/${id}`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       body: provider,
@@ -120,14 +120,14 @@ export const useProviderStore = create<AdminStore>((set, get) => ({
     if (!response.ok) throw new Error('Failed to update provider');
   },
   deleteProvider: async (id: string) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/providers/${id}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/providers/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!response.ok) throw new Error('Failed to delete provider');
   },
   createOffer: async (offer: Partial<Offer>) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/offers`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/offers`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -138,7 +138,7 @@ export const useProviderStore = create<AdminStore>((set, get) => ({
     if (!response.ok) throw new Error('Failed to create offer');
   },
   updateOffer: async (id: string, offer: Partial<Offer>) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/offers/${id}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/offers/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -149,14 +149,14 @@ export const useProviderStore = create<AdminStore>((set, get) => ({
     if (!response.ok) throw new Error('Failed to update offer');
   },
   deleteOffer: async (id: string) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/offers/${id}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/offers/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!response.ok) throw new Error('Failed to delete offer');
   },
   setFeaturedProvider: async (id: string, featured: boolean) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/providers/${id}/featured`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/providers/${id}/featured`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
