@@ -219,26 +219,40 @@ app.get('/api/admin/admins', verifyAdmin, async (req, res) => {
 app.get('/api/admin/providers', verifyAdmin, async (req, res) => {
   try {
     const [providers] = await pool.query('SELECT * FROM providers');
-    const formattedProviders = providers.map((p) => ({
-      id: p.id,
-      name: p.name,
-      username: p.username,
-      city: p.city,
-      zipCode: p.zip_code || undefined,
-      location: p.location || undefined,
-      phone: p.phone || undefined,
-      email: p.email || undefined,
-      website: p.website || undefined,
-      description: p.description || undefined,
-      images: JSON.parse(p.images || '[]'),
-      openingHours: JSON.parse(p.opening_hours || '{}'),
-      category: p.category,
-      subcategory: p.subcategory,
-      address: p.address || undefined,
-      isFeatured: !!p.is_featured,
-      createdAt: p.created_at ? p.created_at.toISOString() : new Date().toISOString(),
-      updatedAt: p.updated_at ? p.updated_at.toISOString() : new Date().toISOString(),
-    }));
+    const formattedProviders = providers.map((p) => {
+      let parsedImages = [];
+      try {
+        parsedImages = JSON.parse(p.images || '[]');
+      } catch (e) {
+        console.error(`Invalid images JSON for provider ${p.id}:`, p.images);
+      }
+      let parsedOpeningHours = {};
+      try {
+        parsedOpeningHours = JSON.parse(p.opening_hours || '{}');
+      } catch (e) {
+        console.error(`Invalid opening_hours JSON for provider ${p.id}:`, p.opening_hours);
+      }
+      return {
+        id: p.id,
+        name: p.name,
+        username: p.username,
+        city: p.city,
+        zipCode: p.zip_code || undefined,
+        location: p.location || undefined,
+        phone: p.phone || undefined,
+        email: p.email || undefined,
+        website: p.website || undefined,
+        description: p.description || undefined,
+        images: parsedImages,
+        openingHours: parsedOpeningHours,
+        category: p.category,
+        subcategory: p.subcategory,
+        address: p.address || undefined,
+        isFeatured: !!p.is_featured,
+        createdAt: p.created_at ? p.created_at.toISOString() : new Date().toISOString(),
+        updatedAt: p.updated_at ? p.updated_at.toISOString() : new Date().toISOString(),
+      };
+    });
     res.status(200).json({ providers: formattedProviders });
   } catch (error) {
     console.error('Error fetching providers:', error);
@@ -517,26 +531,40 @@ app.get('/api/providers', async (req, res) => {
       params.push(`%${search}%`, `%${search}%`);
     }
     const [providers] = await pool.query(query, params);
-    const formattedProviders = providers.map((p) => ({
-      id: p.id,
-      name: p.name,
-      username: p.username,
-      city: p.city,
-      zipCode: p.zip_code || undefined,
-      location: p.location || undefined,
-      phone: p.phone || undefined,
-      email: p.email || undefined,
-      website: p.website || undefined,
-      description: p.description || undefined,
-      images: JSON.parse(p.images || '[]'),
-      openingHours: JSON.parse(p.opening_hours || '{}'),
-      category: p.category,
-      subcategory: p.subcategory,
-      address: p.address || undefined,
-      isFeatured: !!p.is_featured,
-      createdAt: p.created_at ? p.created_at.toISOString() : new Date().toISOString(),
-      updatedAt: p.updated_at ? p.updated_at.toISOString() : new Date().toISOString(),
-    }));
+    const formattedProviders = providers.map((p) => {
+      let parsedImages = [];
+      try {
+        parsedImages = JSON.parse(p.images || '[]');
+      } catch (e) {
+        console.error(`Invalid images JSON for provider ${p.id}:`, p.images);
+      }
+      let parsedOpeningHours = {};
+      try {
+        parsedOpeningHours = JSON.parse(p.opening_hours || '{}');
+      } catch (e) {
+        console.error(`Invalid opening_hours JSON for provider ${p.id}:`, p.opening_hours);
+      }
+      return {
+        id: p.id,
+        name: p.name,
+        username: p.username,
+        city: p.city,
+        zipCode: p.zip_code || undefined,
+        location: p.location || undefined,
+        phone: p.phone || undefined,
+        email: p.email || undefined,
+        website: p.website || undefined,
+        description: p.description || undefined,
+        images: parsedImages,
+        openingHours: parsedOpeningHours,
+        category: p.category,
+        subcategory: p.subcategory,
+        address: p.address || undefined,
+        isFeatured: !!p.is_featured,
+        createdAt: p.created_at ? p.created_at.toISOString() : new Date().toISOString(),
+        updatedAt: p.updated_at ? p.updated_at.toISOString() : new Date().toISOString(),
+      };
+    });
     res.status(200).json({ providers: formattedProviders });
   } catch (error) {
     console.error('Error fetching providers:', error);
