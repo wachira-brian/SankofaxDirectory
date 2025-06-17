@@ -242,7 +242,7 @@ const ProfilePage: React.FC = () => {
                   <>
                     <div className="flex flex-col items-center mb-6">
                       {user.avatar ? (
-                        <img src={user.avatar} alt={user.name} className="w-24 h-24 rounded-full object-cover" />
+                        <img src={`/uploads${user.avatar}`} alt={user.name} className="w-24 h-24 rounded-full object-cover" />
                       ) : (
                         <div className="w-24 h-24 rounded-full bg-primary-100 flex items-center justify-center">
                           <User className="h-12 w-12 text-primary-600" />
