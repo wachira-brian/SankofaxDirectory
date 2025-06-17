@@ -58,7 +58,6 @@ const ProfilePage: React.FC = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const paypalRef = useRef(null);
 
-  // Category and Subcategory mapping
   const categorySubcategories = {
     Products: ['Tech & Gadgets', 'Fashion & Apparel', 'Home & Living'],
     Services: ['IT Services', 'Cleaning', 'Consulting'],
@@ -355,7 +354,7 @@ const ProfilePage: React.FC = () => {
                         label="Name"
                         placeholder="Provider Name"
                         value={selectedProviderId === 'new' ? newProvider.name : editProvider.name}
-                        onChange={(e) => selectedProviderId === 'new' 
+                        onChange={(e) => selectedProviderId === 'new'
                           ? setNewProvider({ ...newProvider, name: e.target.value })
                           : setEditProvider({ ...editProvider, name: e.target.value })}
                         required
@@ -364,7 +363,7 @@ const ProfilePage: React.FC = () => {
                         label="Username"
                         placeholder="Unique username"
                         value={selectedProviderId === 'new' ? newProvider.username : editProvider.username}
-                        onChange={(e) => selectedProviderId === 'new' 
+                        onChange={(e) => selectedProviderId === 'new'
                           ? setNewProvider({ ...newProvider, username: e.target.value })
                           : setEditProvider({ ...editProvider, username: e.target.value })}
                         required
@@ -373,33 +372,33 @@ const ProfilePage: React.FC = () => {
                         label="Description"
                         placeholder="Provider description"
                         value={selectedProviderId === 'new' ? newProvider.description : editProvider.description}
-                        onChange={(e) => selectedProviderId === 'new' 
-                          ? setNewProvider({ ...newProvider, description: e.target.value })}
+                        onChange={(e) => selectedProviderId === 'new'
+                          ? setNewProvider({ ...newProvider, description: e.target.value })
                           : setEditProvider({ ...editProvider, description: e.target.value })}
                       />
                       <Input
                         label="Email"
-                        type="Provider contact email"
-                        placeholder="email"
+                        type="email"
+                        placeholder="Provider contact email"
                         value={selectedProviderId === 'new' ? newProvider.email : editProvider.email}
-                        onChange={(e) => selectedProviderId === 'new' 
-                          ? setNewProvider({ ...newProvider, email: e.target.value })}
+                        onChange={(e) => selectedProviderId === 'new'
+                          ? setNewProvider({ ...newProvider, email: e.target.value })
                           : setEditProvider({ ...editProvider, email: e.target.value })}
                       />
                       <Input
                         label="Phone"
-                        placeholder="Provider contact phone number"
- value={selectedProviderId === 'new' ? newProvider.phone : editProvider.phone}
-                        onChange={(e) => selectedProviderId === 'new' 
-                          ? setNewProvider({ ...newProvider, phone: e.target.value })}
+                        placeholder="Provider contact phone"
+                        value={selectedProviderId === 'new' ? newProvider.phone : editProvider.phone}
+                        onChange={(e) => selectedProviderId === 'new'
+                          ? setNewProvider({ ...newProvider, phone: e.target.value })
                           : setEditProvider({ ...editProvider, phone: e.target.value })}
                       />
                       <Input
                         label="City"
                         placeholder="City"
                         value={selectedProviderId === 'new' ? newProvider.city : editProvider.city}
-                        onChange={(e) => selectedProviderId === 'new' 
-                          ? setNewProvider({ ...newProvider, city: e.target.value })}
+                        onChange={(e) => selectedProviderId === 'new'
+                          ? setNewProvider({ ...newProvider, city: e.target.value })
                           : setEditProvider({ ...editProvider, city: e.target.value })}
                         required
                       />
@@ -407,13 +406,13 @@ const ProfilePage: React.FC = () => {
                         label="Address"
                         placeholder="Full address"
                         value={selectedProviderId === 'new' ? newProvider.address : editProvider.address}
-                        onChange={(e) => selectedProviderId === 'new' 
-                          ? setNewProvider({ ...newProvider, address: e.target.value })}
+                        onChange={(e) => selectedProviderId === 'new'
+                          ? setNewProvider({ ...newProvider, address: e.target.value })
                           : setEditProvider({ ...editProvider, address: e.target.value })}
                         required
                       />
                       <div>
-                        <label className="block">Category</label>
+                        <label className="block text-sm font-medium text-gray-700">Category</label>
                         <select
                           value={selectedProviderId === 'new' ? newProvider.category : editProvider.category}
                           onChange={(e) => {
@@ -425,7 +424,7 @@ const ProfilePage: React.FC = () => {
                               setEditProvider({ ...editProvider, category: newCategory, subcategory: newSubcategory });
                             }
                           }}
-                          className="w-full p-2 border text-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-600"
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                         >
                           {Object.keys(categorySubcategories).map((category) => (
                             <option key={category} value={category}>{category}</option>
@@ -433,13 +432,13 @@ const ProfilePage: React.FC = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block">Subcategory</label>
+                        <label className="block text-sm font-medium text-gray-700">Subcategory</label>
                         <select
                           value={selectedProviderId === 'new' ? newProvider.subcategory : editProvider.subcategory}
-                          onChange={(e) => selectedProviderId === 'new' 
+                          onChange={(e) => selectedProviderId === 'new'
                             ? setNewProvider({ ...newProvider, subcategory: e.target.value })
                             : setEditProvider({ ...editProvider, subcategory: e.target.value })}
-                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-600"
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                         >
                           {categorySubcategories[selectedProviderId === 'new' ? newProvider.category : editProvider.category].map((subcat) => (
                             <option key={subcat} value={subcat}>{subcat}</option>
@@ -448,20 +447,21 @@ const ProfilePage: React.FC = () => {
                       </div>
                       <Input
                         label="Website"
-                        placeholder="https://example.com" type="url"
+                        placeholder="https://example.com"
+                        type="url"
                         value={selectedProviderId === 'new' ? newProvider.website : editProvider.website}
-                        onChange={(e) => selectedProviderId === 'new' 
-                          ? setNewProvider({ ...newProvider, website: e.target.value })}
+                        onChange={(e) => selectedProviderId === 'new'
+                          ? setNewProvider({ ...newProvider, website: e.target.value })
                           : setEditProvider({ ...editProvider, website: e.target.value })}
                       />
                       <div>
-                        <label className="block">Status</label>
+                        <label className="block text-sm font-medium text-gray-700">Status</label>
                         <select
                           value={selectedProviderId === 'new' ? newProvider.status : editProvider.status}
-                          onChange={(e) => selectedProviderId === 'new' 
-                            ? setNewProvider({ ...newProvider, status: e.target.value })}
+                          onChange={(e) => selectedProviderId === 'new'
+                            ? setNewProvider({ ...newProvider, status: e.target.value })
                             : setEditProvider({ ...editProvider, status: e.target.value })}
-                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-600"
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                         >
                           <option value="active">Active</option>
                           <option value="pending">Pending</option>
@@ -478,7 +478,8 @@ const ProfilePage: React.FC = () => {
                         <Button variant="outline" onClick={() => setSelectedProviderId(null)}>Cancel</Button>
                       </div>
                     </div>
-                ))}
+                  </div>
+                )}
                 <div ref={paypalRef} className="hidden" />
               </CardContent>
             </Card>
