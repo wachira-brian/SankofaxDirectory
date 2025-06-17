@@ -162,7 +162,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   setFeaturedProvider: async (id, featured) => {
     try {
       const response = await axios.put(
-        `${API_BASE_URL}/api/admin/providers/${id}/featured`,
+        `${API_BASE_URL}/admin/providers/${id}/featured`,
         { isFeatured: featured },
         {
           headers: {
