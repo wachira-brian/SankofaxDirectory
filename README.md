@@ -6,3 +6,5 @@ sudo systemctl reload nginx
 
 sudo nginx -t
 sudo systemctl reload nginx
+npm run build
+sudo cp -r dist/* /var/www/sankofax
