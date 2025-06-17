@@ -16,7 +16,7 @@ const categories = [
 ];
 
 const subcategories: Record<string, string[]> = {
-  'Products': [
+  Products: [
     'Fashion & Apparel',
     'Beauty & Skincare',
     'Food & Beverage',
@@ -26,7 +26,7 @@ const subcategories: Record<string, string[]> = {
     'Tech & Gadgets',
     'Jewelry & Handmade Items',
   ],
-  'Services': [
+  Services: [
     'Home Services',
     'Transportation & Logistics',
     'Legal Services',
@@ -85,7 +85,17 @@ const timeSlots = [
   '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00',
 ];
 
-const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const daysOfWeek = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+const dayMap: Record<string, string> = {
+  mon: 'monday',
+  tue: 'tuesday',
+  wed: 'wednesday',
+  thu: 'thursday',
+  fri: 'friday',
+  sat: 'saturday',
+  sun: 'sunday',
+};
 
 const AdminPage: React.FC = () => {
   const {
@@ -115,6 +125,7 @@ const AdminPage: React.FC = () => {
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [openingHours, setOpeningHours] = useState<Record<string, { open: string; close: string }>>({
     monday: { open: 'Closed', close: 'Closed' },
     tuesday: { open: 'Closed', close: 'Closed' },
@@ -132,20 +143,24 @@ const AdminPage: React.FC = () => {
     fetchAdmins();
   }, [fetchProviders, fetchOffers, fetchUserCount, fetchAdmins]);
 
-  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setImageFiles([...imageFiles, ...Array.from(e.target.files)]);
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setImageFiles([...imageFiles, ...files]);
+  };
+
+  const handleRemoveImage = (index: number, isExisting: boolean = false) => {
+    if (isExisting) {
+      setExistingImages(existingImages.filter((_, i) => i !== index));
+    } else {
+      setImageFiles(imageFiles.filter((_, i) => i !== index));
     }
   };
 
-  const handleRemoveImage = (index: number) => {
-    setImageFiles(imageFiles.filter((_, i) => i !== index));
-  };
-
   const handleOpeningHoursChange = (day: string, type: 'open' | 'close', value: string) => {
+    const fullDay = dayMap[day];
     setOpeningHours((prev) => ({
       ...prev,
-      [day]: { ...prev[day], [type]: value },
+      [fullDay]: { ...prev[fullDay], [type]: value },
     }));
   };
 
@@ -163,22 +178,22 @@ const AdminPage: React.FC = () => {
   const handleProviderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { location, ...rest } = providerForm;
-
       const formData = new FormData();
       imageFiles.forEach((file) => formData.append('images', file));
-      formData.append('username', rest.username || '');
-      formData.append('name', rest.name || '');
-      formData.append('city', rest.city || '');
-      formData.append('phone', rest.phone || '');
-      formData.append('email', rest.email || '');
-      formData.append('website', rest.website || '');
-      formData.append('description', rest.description || '');
-      formData.append('category', rest.category || '');
-      formData.append('subcategory', rest.subcategory || '');
-      formData.append('openingHours', JSON.stringify(openingHours));
-      formData.append('location', location || '');
-      formData.append('address', rest.address || '');
+      formData.append('existingImages', JSON.stringify(existingImages));
+      formData.append('username', providerForm.username || '');
+      formData.append('name', providerForm.name || '');
+      formData.append('city', providerForm.city || '');
+      formData.append('zip_code', providerForm.zip_code || '');
+      formData.append('phone', providerForm.phone || '');
+      formData.append('email', providerForm.email || '');
+      formData.append('website', providerForm.website || '');
+      formData.append('description', providerForm.description || '');
+      formData.append('category', providerForm.category || '');
+      formData.append('subcategory', providerForm.subcategory || '');
+      formData.append('opening_hours', JSON.stringify(openingHours));
+      formData.append('location', providerForm.location || '');
+      formData.append('address', providerForm.address || '');
       if (!providerId) {
         formData.append('id', generateProviderId());
       }
@@ -191,6 +206,7 @@ const AdminPage: React.FC = () => {
       setProviderForm({});
       setProviderId('');
       setImageFiles([]);
+      setExistingImages([]);
       setOpeningHours({
         monday: { open: 'Closed', close: 'Closed' },
         tuesday: { open: 'Closed', close: 'Closed' },
@@ -213,8 +229,9 @@ const AdminPage: React.FC = () => {
       ...provider,
       location: provider.location || '',
       address: provider.address || '',
+      zip_code: provider.zip_code || '',
     });
-    setOpeningHours(provider.openingHours || {
+    setOpeningHours(provider.opening_hours || {
       monday: { open: 'Closed', close: 'Closed' },
       tuesday: { open: 'Closed', close: 'Closed' },
       wednesday: { open: 'Closed', close: 'Closed' },
@@ -223,6 +240,7 @@ const AdminPage: React.FC = () => {
       saturday: { open: 'Closed', close: 'Closed' },
       sunday: { open: 'Closed', close: 'Closed' },
     });
+    setExistingImages(provider.images || []);
     setImageFiles([]);
     setShowProviderForm(true);
   };
@@ -306,7 +324,6 @@ const AdminPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
 
-        {/* User Stats and Admins */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader>
@@ -339,7 +356,6 @@ const AdminPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Providers Section */}
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -349,6 +365,7 @@ const AdminPage: React.FC = () => {
                 setProviderForm({});
                 setProviderId('');
                 setImageFiles([]);
+                setExistingImages([]);
                 setOpeningHours({
                   monday: { open: 'Closed', close: 'Closed' },
                   tuesday: { open: 'Closed', close: 'Closed' },
@@ -365,7 +382,6 @@ const AdminPage: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Provider Form */}
             {showProviderForm && (
               <form onSubmit={handleProviderSubmit} className="space-y-4 mb-6 p-4 border rounded-md bg-gray-50">
                 <Input
@@ -385,6 +401,11 @@ const AdminPage: React.FC = () => {
                   value={providerForm.city || ''}
                   onChange={(e) => setProviderForm({ ...providerForm, city: e.target.value })}
                   required
+                />
+                <Input
+                  label="Zip Code"
+                  value={providerForm.zip_code || ''}
+                  onChange={(e) => setProviderForm({ ...providerForm, zip_code: e.target.value })}
                 />
                 <Input
                   label="Phone"
@@ -413,48 +434,66 @@ const AdminPage: React.FC = () => {
                     type="file"
                     multiple
                     accept="image/*"
-                    onChange={handleImageUpload}
+                    onChange={handleImageChange}
                     className="border rounded-md p-2 w-full"
                   />
-                  {imageFiles.length > 0 && (
-                    <div className="mt-2">
-                      {imageFiles.map((file, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-600">{file.name}</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRemoveImage(index)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {existingImages.map((img, index) => (
+                      <div key={`existing-${index}`} className="relative">
+                        <img
+                          src={`${import.meta.env.VITE_API_URL}${img}`}
+                          alt="Existing"
+                          className="w-full h-24 object-cover rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index, true)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                    {imageFiles.map((file, index) => (
+                      <div key={`new-${index}`} className="relative">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt="Preview"
+                          className="w-full h-24 object-cover rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Opening Hours</label>
                   {daysOfWeek.map((day) => (
                     <div key={day} className="flex items-center space-x-2 mb-2">
-                      <span className="w-24 capitalize">{day}</span>
+                      <span className="w-16 capitalize">{day}</span>
                       <select
-                        value={openingHours[day].open}
+                        value={openingHours[dayMap[day]].open}
                         onChange={(e) => handleOpeningHoursChange(day, 'open', e.target.value)}
                         className="border rounded-md p-2 flex-1"
                       >
                         {timeSlots.map((time) => (
-                          <option key={time} value={time}>{time}</option>
+                          <option key={`${day}-open-${time}`} value={time}>{time}</option>
                         ))}
                       </select>
                       <span>to</span>
                       <select
-                        value={openingHours[day].close}
+                        value={openingHours[dayMap[day]].close}
                         onChange={(e) => handleOpeningHoursChange(day, 'close', e.target.value)}
                         className="border rounded-md p-2 flex-1"
                       >
                         {timeSlots.map((time) => (
-                          <option key={time} value={time}>{time}</option>
+                          <option key={`${day}-close-${time}`} value={time}>{time}</option>
                         ))}
                       </select>
                     </div>
@@ -464,7 +503,7 @@ const AdminPage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                   <select
                     value={providerForm.category || ''}
-                    onChange={(e) => setProviderForm({ ...providerForm, category: e.target.value })}
+                    onChange={(e) => setProviderForm({ ...providerForm, category: e.target.value, subcategory: subcategories[e.target.value]?.[0] || '' })}
                     className="border rounded-md p-2 w-full"
                     required
                   >
@@ -506,7 +545,6 @@ const AdminPage: React.FC = () => {
               </form>
             )}
 
-            {/* Search and Filter Row */}
             <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
               <form onSubmit={handleSearch} className="flex-1">
                 <Input
@@ -539,7 +577,6 @@ const AdminPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Mobile Categories Filter */}
             {isMobileFilterOpen && (
               <div className="fixed inset-0 z-40 md:hidden">
                 <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsMobileFilterOpen(false)}></div>
@@ -576,7 +613,6 @@ const AdminPage: React.FC = () => {
             )}
 
             <div className="flex flex-col md:flex-row">
-              {/* Desktop Categories Filter */}
               <div className="hidden md:block w-64 mr-8">
                 <Card>
                   <CardHeader>
@@ -602,7 +638,6 @@ const AdminPage: React.FC = () => {
                 </Card>
               </div>
 
-              {/* Providers List */}
               <div className="flex-1">
                 <div className="grid grid-cols-1 gap-4">
                   {filteredProviders.length === 0 ? (
@@ -644,7 +679,6 @@ const AdminPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Offers Section */}
         <Card className="mb-8">
           <CardHeader>
             <h2 className="text-2xl font-semibold text-gray-900">Manage Offers</h2>
