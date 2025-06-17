@@ -621,10 +621,10 @@ const ProfilePage: React.FC = () => {
                         }
                       />
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Opening Hours</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Opening Hours</label>
                         {daysOfWeek.map((day) => (
                           <div key={day} className="flex items-center space-x-2 mb-2">
-                            <span className="w-24 capitalize text-gray-600">{day}</span>
+                            <span className="w-24 capitalize">{day}</span>
                             <select
                               value={
                                 selectedProviderId === 'new'
@@ -632,13 +632,13 @@ const ProfilePage: React.FC = () => {
                                   : editProvider.opening_hours[day].open
                               }
                               onChange={(e) => handleOpeningHoursChange(day, 'open', e.target.value, selectedProviderId !== 'new')}
-                              className="w-32 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                              className="border rounded-md p-2 flex-1"
                             >
-                              {timeSlots.map((slot) => (
-                                <option key={`${day}-open-${slot}`} value={slot}>{slot}</option>
+                              {timeSlots.map((time) => (
+                                <option key={`${day}-open-${time}`} value={time}>{time}</option>
                               ))}
                             </select>
-                            <span className="text-gray-600">to</span>
+                            <span>to</span>
                             <select
                               value={
                                 selectedProviderId === 'new'
@@ -646,10 +646,10 @@ const ProfilePage: React.FC = () => {
                                   : editProvider.opening_hours[day].close
                               }
                               onChange={(e) => handleOpeningHoursChange(day, 'close', e.target.value, selectedProviderId !== 'new')}
-                              className="w-32 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                              className="border rounded-md p-2 flex-1"
                             >
-                              {timeSlots.map((slot) => (
-                                <option key={`${day}-close-${slot}`} value={slot}>{slot}</option>
+                              {timeSlots.map((time) => (
+                                <option key={`${day}-close-${time}`} value={time}>{time}</option>
                               ))}
                             </select>
                           </div>
@@ -668,7 +668,7 @@ const ProfilePage: React.FC = () => {
                               setEditProvider({ ...editProvider, category: newCategory, subcategory: newSubcategory });
                             }
                           }}
-                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                          className="w-full p-2 border border-gray-300 rounded-md"
                         >
                           {Object.keys(categorySubcategories).map((category) => (
                             <option key={category} value={category}>{category}</option>
@@ -684,7 +684,7 @@ const ProfilePage: React.FC = () => {
                               ? setNewProvider({ ...newProvider, subcategory: e.target.value })
                               : setEditProvider({ ...editProvider, subcategory: e.target.value })
                           }
-                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                          className="w-full p-2 border border-gray-300 rounded-md"
                         >
                           {categorySubcategories[
                             selectedProviderId === 'new' ? newProvider.category : editProvider.category
