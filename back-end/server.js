@@ -188,6 +188,73 @@ app.post('/api/login', [
   }
 });
 
+// In server.js, add this after other routes
+app.post('/api/signup', [
+  body('name').notEmpty().isString().trim(),
+  body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 8 }),
+  body('phone').optional().isString(),
+  body('avatar').optional().isURL(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { name, email, password, phone, avatar } = req.body;
+
+  try {
+    // Check if email already exists
+    const [existingUsers] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+    if (existingUsers.length > 0) {
+      return res.status(400).json({ error: 'Email already in use' });
+    }
+
+    // Generate unique user ID
+    const userId = `user${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert new user
+    await pool.query(
+      `INSERT INTO users (id, name, email, password, role, phone, avatar) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [userId, name, email, hashedPassword, 'user', phone || null, avatar || null]
+    );
+
+    // Fetch the newly created user
+    const [users] = await pool.query('SELECT id, name, email, role, phone, avatar, created_at FROM users WHERE id = ?', [userId]);
+    const user = users[0];
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    // Return user and token
+    res.status(201).json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone || undefined,
+        avatar: user.avatar || undefined,
+        createdAt: user.created_at.toISOString(),
+      },
+      token,
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
 app.get('/api/admin/users/count', verifyAdmin, async (req, res) => {
   try {
     const [result] = await pool.query('SELECT COUNT(*) as count FROM users');
