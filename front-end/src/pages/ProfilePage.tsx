@@ -30,7 +30,17 @@ const ProfilePage: React.FC = () => {
     '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00',
   ];
 
-  const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const daysOfWeek = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+  const dayMap: Record<string, string> = {
+    mon: 'monday',
+    tue: 'tuesday',
+    wed: 'wednesday',
+    thu: 'thursday',
+    fri: 'friday',
+    sat: 'saturday',
+    sun: 'sunday',
+  };
 
   const [isEditing, setIsEditing] = useState(false);
   const [editUser, setEditUser] = useState({ name: '', email: '', phone: '', avatar: '' });
@@ -91,7 +101,6 @@ const ProfilePage: React.FC = () => {
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const paypalRef = useRef(null);
 
-  // Category and Subcategory mapping from SankofaX Directory Structure
   const categorySubcategories = {
     Products: [
       'Fashion & Apparel',
@@ -204,13 +213,14 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleOpeningHoursChange = (day: string, type: 'open' | 'close', value: string, isEdit: boolean) => {
+    const fullDay = dayMap[day];
     if (isEdit) {
       setEditProvider({
         ...editProvider,
         opening_hours: {
           ...editProvider.opening_hours,
-          [day]: {
-            ...editProvider.opening_hours[day],
+          [fullDay]: {
+            ...editProvider.opening_hours[fullDay],
             [type]: value,
           },
         },
@@ -220,8 +230,8 @@ const ProfilePage: React.FC = () => {
         ...newProvider,
         opening_hours: {
           ...newProvider.opening_hours,
-          [day]: {
-            ...newProvider.opening_hours[day],
+          [fullDay]: {
+            ...newProvider.opening_hours[fullDay],
             [type]: value,
           },
         },
@@ -624,12 +634,12 @@ const ProfilePage: React.FC = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Opening Hours</label>
                         {daysOfWeek.map((day) => (
                           <div key={day} className="flex items-center space-x-2 mb-2">
-                            <span className="w-24 capitalize">{day}</span>
+                            <span className="w-16 capitalize">{day}</span>
                             <select
                               value={
                                 selectedProviderId === 'new'
-                                  ? newProvider.opening_hours[day].open
-                                  : editProvider.opening_hours[day].open
+                                  ? newProvider.opening_hours[dayMap[day]].open
+                                  : editProvider.opening_hours[dayMap[day]].open
                               }
                               onChange={(e) => handleOpeningHoursChange(day, 'open', e.target.value, selectedProviderId !== 'new')}
                               className="border rounded-md p-2 flex-1"
@@ -642,8 +652,8 @@ const ProfilePage: React.FC = () => {
                             <select
                               value={
                                 selectedProviderId === 'new'
-                                  ? newProvider.opening_hours[day].close
-                                  : editProvider.opening_hours[day].close
+                                  ? newProvider.opening_hours[dayMap[day]].close
+                                  : editProvider.opening_hours[dayMap[day]].close
                               }
                               onChange={(e) => handleOpeningHoursChange(day, 'close', e.target.value, selectedProviderId !== 'new')}
                               className="border rounded-md p-2 flex-1"
