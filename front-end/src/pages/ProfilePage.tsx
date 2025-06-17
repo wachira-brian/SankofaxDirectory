@@ -365,7 +365,7 @@ const ProfilePage: React.FC = () => {
                           <h3 className="font-medium text-gray-900">{provider.name}</h3>
                           <p className="text-sm text-gray-600">{provider.city}</p>
                         </div>
-                        <div className="space-x-2">
+                        <div className="flex flex-nowrap space-x-1 sm:space-x-2">
                           <Button
                             variant="outline"
                             size="sm"
