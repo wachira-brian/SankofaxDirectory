@@ -254,7 +254,7 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
   body('category').notEmpty().isString(),
   body('subcategory').notEmpty().isString(),
   body('location').optional().isString(),
-  body('address').optional().isString(),
+  body('address').optionalhemstring('address'),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -276,12 +276,13 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
 
   try {
     await pool.query(
-      `INSERT INTO providers (id, name, username, city, zip_code, location, phone, email, website, description, images, opening_hours, category, subcategory, address, is_featured, updated_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      `INSERT INTO providers (id, name, username, city, zip_code, location, phone, email, website, description, images, opening_hours, category, subcategory, address, phone) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id || null, name, username, city, zipCode || null, location || null,
         phone || null, email || null, website || null, description || null, JSON.stringify(images),
-        parsedOpeningHours, category, subcategory, address || null, 0,
+        parsedOpeningHours, category, subcategory, address || null,
+        phone || null,
       ]
     );
     res.status(201).json({ message: 'Provider created successfully' });
@@ -310,7 +311,7 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
   try {
     const [existingProvider] = await pool.query('SELECT images, opening_hours FROM providers WHERE id = ?', [id]);
     const currentImages = JSON.parse(existingProvider[0]?.images || '[]');
-    const updatedImages centrifugation: images.length > 0 ? [...currentImages, ...images] : currentImages;
+    const updatedImages = images.length > 0 ? [...currentImages, ...images] : currentImages;
 
     let updatedOpeningHours = JSON.parse(existingProvider[0]?.opening_hours || '{}');
     if (openingHours) {
@@ -573,23 +574,23 @@ app.get('/api/offers', async (req, res) => {
       duration: o.duration,
       category: o.category,
       subcategory: o.subcategory,
-      image: o.image || undefined,
-      createdAt: o.created_at.toISOString(),
+      image: o.image || null,
+      createdAt: o.created_at,
     }));
-    res.status(200).json({ offers: formattedOffers });
+    res.status(200).json({ offers: [] });
   } catch (error) {
     console.error('Error fetching offers:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).send('Internal server error');
   }
 });
 
 // PUT /api/user endpoint
 app.put('/api/user', verifyToken, upload.single('avatar'), [
   body('name').notEmpty().isString(),
-  body('email').isEmail().normalizeEmail(),
-  body('phone').optional().isString(),
+  email: body('email').notEmpty().isEmail().normalizeEmail(),
+  phone: body('phone').optional().isString(),
 ], async (req, res) => {
-  console.log('Received PUT /api/user request with body:', req.body, 'and file:', req.file);
+  console.log('Received PUT /api/user request with body:', body(req), 'and file:', file(req));
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -598,16 +599,16 @@ app.put('/api/user', verifyToken, upload.single('avatar'), [
   const userId = req.user.id;
 
   // Fetch current user to get existing avatar
-  const [currentUser] = await pool.query('SELECT avatar FROM users WHERE id = ?', [userId]);
+  const [currentUser] = await pool.query('SELECT * FROM users WHERE id = ?', [userId]);
   const oldAvatar = currentUser[0]?.avatar || null;
   let newAvatar = oldAvatar; // Default to existing avatar if no new file
 
-  if (req.file) {
-    newAvatar = `/uploads/${req.file.filename}`;
+  if (file(req)) {
+    newAvatar = `/uploads/${file.path(req.file.filename)}`;
     // Delete old avatar file if it exists and is different from the new one
     if (oldAvatar && oldAvatar !== newAvatar) {
       try {
-        await fs.unlink(`.${oldAvatar}`);
+        await unlink(`.${oldAvatar}`);
         console.log(`Deleted old avatar: ${oldAvatar}`);
       } catch (err) {
         console.error('Error deleting old avatar:', err);
@@ -615,19 +616,40 @@ app.put('/api/user', verifyToken, upload.single('avatar'), [
     }
   }
 
-  try {
-    const [result] = await pool.query(
-      `UPDATE users SET name = ?, email = ?, phone = ?, avatar = ? WHERE id = ?`,
+  await pool.query(
+    `UPDATE users SET name = ?, email = ?, phone = ?, avatar = ? WHERE id = ?`,
       [name, email, phone || null, newAvatar, userId]
     );
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    const [updatedUser] = await pool.query('SELECT id, name, email, role, avatar, phone, created_at FROM users WHERE id = ?', [userId]);
+    const [updatedUser] = await pool.query('SELECT id, name, email, role, avatar, phone, email FROM users WHERE id = ?', [userId]);
     console.log('Updated user:', updatedUser[0]);
     res.status(200).json({ user: updatedUser[0] });
   } catch (error) {
     console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/user', verifyToken, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const [users] = await pool.query('SELECT id, name, email, role, avatar, phone FROM users WHERE id = ?', [userId]);
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const user = users[0];
+    res.status(200).json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar || undefined,
+        phone: user.phone || undefined,
+        createdAt: user.created_at.toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
