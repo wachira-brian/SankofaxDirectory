@@ -24,6 +24,14 @@ const ProfilePage: React.FC = () => {
     setFeaturedProvider,
   } = useProviderStore();
 
+  const timeSlots = [
+    'Closed',
+    '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
+    '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00',
+  ];
+
+  const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
   const [isEditing, setIsEditing] = useState(false);
   const [editUser, setEditUser] = useState({ name: '', email: '', phone: '', avatar: '' });
   const [newProvider, setNewProvider] = useState({
@@ -37,7 +45,15 @@ const ProfilePage: React.FC = () => {
     zip_code: '',
     address: '',
     location: '',
-    opening_hours: '',
+    opening_hours: {
+      monday: { open: 'Closed', close: 'Closed' },
+      tuesday: { open: 'Closed', close: 'Closed' },
+      wednesday: { open: 'Closed', close: 'Closed' },
+      thursday: { open: 'Closed', close: 'Closed' },
+      friday: { open: 'Closed', close: 'Closed' },
+      saturday: { open: 'Closed', close: 'Closed' },
+      sunday: { open: 'Closed', close: 'Closed' },
+    },
     category: 'Products',
     subcategory: 'Fashion & Apparel',
     website: '',
@@ -55,7 +71,15 @@ const ProfilePage: React.FC = () => {
     zip_code: '',
     address: '',
     location: '',
-    opening_hours: '',
+    opening_hours: {
+      monday: { open: 'Closed', close: 'Closed' },
+      tuesday: { open: 'Closed', close: 'Closed' },
+      wednesday: { open: 'Closed', close: 'Closed' },
+      thursday: { open: 'Closed', close: 'Closed' },
+      friday: { open: 'Closed', close: 'Closed' },
+      saturday: { open: 'Closed', close: 'Closed' },
+      sunday: { open: 'Closed', close: 'Closed' },
+    },
     category: 'Products',
     subcategory: 'Fashion & Apparel',
     website: '',
@@ -179,11 +203,39 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleOpeningHoursChange = (day: string, type: 'open' | 'close', value: string, isEdit: boolean) => {
+    if (isEdit) {
+      setEditProvider({
+        ...editProvider,
+        opening_hours: {
+          ...editProvider.opening_hours,
+          [day]: {
+            ...editProvider.opening_hours[day],
+            [type]: value,
+          },
+        },
+      });
+    } else {
+      setNewProvider({
+        ...newProvider,
+        opening_hours: {
+          ...newProvider.opening_hours,
+          [day]: {
+            ...newProvider.opening_hours[day],
+            [type]: value,
+          },
+        },
+      });
+    }
+  };
+
   const handleCreateProvider = async () => {
     const formData = new FormData();
     formData.append('id', crypto.randomUUID());
     Object.entries(newProvider).forEach(([key, value]) => {
-      if (value && key !== 'images') {
+      if (key === 'opening_hours') {
+        formData.append(key, JSON.stringify(value));
+      } else if (value && key !== 'images') {
         formData.append(key, value);
       }
     });
@@ -201,7 +253,15 @@ const ProfilePage: React.FC = () => {
         zip_code: '',
         address: '',
         location: '',
-        opening_hours: '',
+        opening_hours: {
+          monday: { open: 'Closed', close: 'Closed' },
+          tuesday: { open: 'Closed', close: 'Closed' },
+          wednesday: { open: 'Closed', close: 'Closed' },
+          thursday: { open: 'Closed', close: 'Closed' },
+          friday: { open: 'Closed', close: 'Closed' },
+          saturday: { open: 'Closed', close: 'Closed' },
+          sunday: { open: 'Closed', close: 'Closed' },
+        },
         category: 'Products',
         subcategory: 'Fashion & Apparel',
         website: '',
@@ -218,7 +278,9 @@ const ProfilePage: React.FC = () => {
     if (!selectedProviderId) return;
     const formData = new FormData();
     Object.entries(editProvider).forEach(([key, value]) => {
-      if (value && key !== 'images') {
+      if (key === 'opening_hours') {
+        formData.append(key, JSON.stringify(value));
+      } else if (value && key !== 'images') {
         formData.append(key, value);
       }
     });
@@ -419,7 +481,15 @@ const ProfilePage: React.FC = () => {
                                 phone: provider.phone || '',
                                 zip_code: provider.zip_code || '',
                                 location: provider.location || '',
-                                opening_hours: provider.opening_hours ? JSON.stringify(provider.opening_hours) : '',
+                                opening_hours: provider.opening_hours || {
+                                  monday: { open: 'Closed', close: 'Closed' },
+                                  tuesday: { open: 'Closed', close: 'Closed' },
+                                  wednesday: { open: 'Closed', close: 'Closed' },
+                                  thursday: { open: 'Closed', close: 'Closed' },
+                                  friday: { open: 'Closed', close: 'Closed' },
+                                  saturday: { open: 'Closed', close: 'Closed' },
+                                  sunday: { open: 'Closed', close: 'Closed' },
+                                },
                                 website: provider.website || '',
                                 subcategory: provider.subcategory || categorySubcategories[provider.category]?.[0] || '',
                                 images: provider.images || [],
@@ -550,16 +620,41 @@ const ProfilePage: React.FC = () => {
                             : setEditProvider({ ...editProvider, location: e.target.value })
                         }
                       />
-                      <Input
-                        label="Opening Hours"
-                        placeholder='JSON format, e.g., {"monday": "9AM-5PM", "tuesday": "9AM-5PM"}'
-                        value={selectedProviderId === 'new' ? newProvider.opening_hours : editProvider.opening_hours}
-                        onChange={(e) =>
-                          selectedProviderId === 'new'
-                            ? setNewProvider({ ...newProvider, opening_hours: e.target.value })
-                            : setEditProvider({ ...editProvider, opening_hours: e.target.value })
-                        }
-                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Opening Hours</label>
+                        {daysOfWeek.map((day) => (
+                          <div key={day} className="flex items-center space-x-2 mb-2">
+                            <span className="w-24 capitalize text-gray-600">{day}</span>
+                            <select
+                              value={
+                                selectedProviderId === 'new'
+                                  ? newProvider.opening_hours[day].open
+                                  : editProvider.opening_hours[day].open
+                              }
+                              onChange={(e) => handleOpeningHoursChange(day, 'open', e.target.value, selectedProviderId !== 'new')}
+                              className="w-32 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                            >
+                              {timeSlots.map((slot) => (
+                                <option key={`${day}-open-${slot}`} value={slot}>{slot}</option>
+                              ))}
+                            </select>
+                            <span className="text-gray-600">to</span>
+                            <select
+                              value={
+                                selectedProviderId === 'new'
+                                  ? newProvider.opening_hours[day].close
+                                  : editProvider.opening_hours[day].close
+                              }
+                              onChange={(e) => handleOpeningHoursChange(day, 'close', e.target.value, selectedProviderId !== 'new')}
+                              className="w-32 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                            >
+                              {timeSlots.map((slot) => (
+                                <option key={`${day}-close-${slot}`} value={slot}>{slot}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Category</label>
                         <select
