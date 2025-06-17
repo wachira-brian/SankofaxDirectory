@@ -4,12 +4,11 @@ import { User, Plus, Edit2, Trash2, Upload, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuthStore } from '../store/authStore';
 import { useProviderStore } from '../store/providerStore';
-import Card from '../components/Card';
-import { CardHeader, CardContent } from '../components/CardContent';
+import Card, { CardHeader, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { toast } from 'react-toastify';
- 
+
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -423,6 +422,7 @@ const ProfilePage: React.FC = () => {
                                 opening_hours: provider.opening_hours ? JSON.stringify(provider.opening_hours) : '',
                                 website: provider.website || '',
                                 subcategory: provider.subcategory || categorySubcategories[provider.category]?.[0] || '',
+                                images: provider.images || [],
                               });
                               setExistingImages(provider.images || []);
                               setEditImages([]);
