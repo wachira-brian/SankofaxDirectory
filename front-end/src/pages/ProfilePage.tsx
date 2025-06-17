@@ -36,7 +36,7 @@ const ProfilePage: React.FC = () => {
     city: '',
     address: '',
     category: 'Products',
-    subcategory: 'Tech & Gadgets',
+    subcategory: 'Fashion & Apparel',
     website: '',
     status: 'active',
   });
@@ -51,18 +51,76 @@ const ProfilePage: React.FC = () => {
     city: '',
     address: '',
     category: 'Products',
-    subcategory: 'Tech & Gadgets',
+    subcategory: 'Fashion & Apparel',
     website: '',
     status: 'active',
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const paypalRef = useRef(null);
 
+  // Category and Subcategory mapping from SankofaX Directory Structure
   const categorySubcategories = {
-    Products: ['Tech & Gadgets', 'Fashion & Apparel', 'Home & Living'],
-    Services: ['IT Services', 'Cleaning', 'Consulting'],
-    Retail: ['Electronics', 'Clothing', 'Furniture'],
-    'Professional Services': ['Legal', 'Accounting', 'Marketing'],
+    Products: [
+      'Fashion & Apparel',
+      'Beauty & Skincare',
+      'Food & Beverage',
+      'Art & Decor',
+      'Books & Media',
+      'African Traditional Products',
+      'Tech & Gadgets',
+      'Jewelry & Handmade Items',
+    ],
+    Services: [
+      'Home Services',
+      'Transportation & Logistics',
+      'Legal Services',
+      'Financial Services',
+      'Marketing & Branding',
+      'Health & Fitness',
+      'Events & Entertainment',
+      'Travel & Tourism',
+      'Repair & Maintenance',
+    ],
+    'Education & Learning': [
+      'Online Courses & Training',
+      'Tutors & Coaching',
+      'Schools & Institutions',
+      'Workshops & Seminars',
+      'Language Learning',
+      'Youth Development Programs',
+      'Study Abroad Programs',
+      'Cultural & Heritage Education',
+    ],
+    'Health & Wellness': [
+      'Holistic & Traditional Healing',
+      'Clinics & Health Professionals',
+      'Herbal Products & Remedies',
+      'Mental Health Services',
+      'Maternity & Birth',
+      'Fitness Centers',
+      'Spiritual Guidance / Faith-Based Services',
+      'Nutritionists & Wellness Coaches',
+    ],
+    'Professional & Creative': [
+      'Graphic & Web Design',
+      'Content Creators / Influencers',
+      'Writers & Editors',
+      'IT & Developers',
+      'Consultants',
+      'Photographers & Videographers',
+      'Architects & Engineers',
+      'Virtual Assistants / Admin',
+    ],
+    'Community & Culture': [
+      'Nonprofits & NGOs',
+      'Cultural Centers',
+      'Diaspora Groups',
+      'Youth Programs',
+      "Women's Networks",
+      'Pan-African Forums',
+      'Podcasts & Media Channels',
+      'Churches / Faith Communities',
+    ],
   };
 
   useEffect(() => {
@@ -111,7 +169,7 @@ const ProfilePage: React.FC = () => {
         city: '',
         address: '',
         category: 'Products',
-        subcategory: 'Tech & Gadgets',
+        subcategory: 'Fashion & Apparel',
         website: '',
         status: 'active',
       });
@@ -320,6 +378,7 @@ const ProfilePage: React.FC = () => {
                                 phone: provider.phone || '',
                                 website: provider.website || '',
                                 status: provider.status || 'active',
+                                subcategory: provider.subcategory || categorySubcategories[provider.category]?.[0] || '',
                               });
                             }}
                           >
@@ -354,61 +413,75 @@ const ProfilePage: React.FC = () => {
                         label="Name"
                         placeholder="Provider Name"
                         value={selectedProviderId === 'new' ? newProvider.name : editProvider.name}
-                        onChange={(e) => selectedProviderId === 'new'
-                          ? setNewProvider({ ...newProvider, name: e.target.value })
-                          : setEditProvider({ ...editProvider, name: e.target.value })}
+                        onChange={(e) =>
+                          selectedProviderId === 'new'
+                            ? setNewProvider({ ...newProvider, name: e.target.value })
+                            : setEditProvider({ ...editProvider, name: e.target.value })
+                        }
                         required
                       />
                       <Input
                         label="Username"
                         placeholder="Unique username"
                         value={selectedProviderId === 'new' ? newProvider.username : editProvider.username}
-                        onChange={(e) => selectedProviderId === 'new'
-                          ? setNewProvider({ ...newProvider, username: e.target.value })
-                          : setEditProvider({ ...editProvider, username: e.target.value })}
+                        onChange={(e) =>
+                          selectedProviderId === 'new'
+                            ? setNewProvider({ ...newProvider, username: e.target.value })
+                            : setEditProvider({ ...editProvider, username: e.target.value })
+                        }
                         required
                       />
                       <Input
                         label="Description"
                         placeholder="Provider description"
                         value={selectedProviderId === 'new' ? newProvider.description : editProvider.description}
-                        onChange={(e) => selectedProviderId === 'new'
-                          ? setNewProvider({ ...newProvider, description: e.target.value })
-                          : setEditProvider({ ...editProvider, description: e.target.value })}
+                        onChange={(e) =>
+                          selectedProviderId === 'new'
+                            ? setNewProvider({ ...newProvider, description: e.target.value })
+                            : setEditProvider({ ...editProvider, description: e.target.value })
+                        }
                       />
                       <Input
                         label="Email"
                         type="email"
                         placeholder="Provider contact email"
                         value={selectedProviderId === 'new' ? newProvider.email : editProvider.email}
-                        onChange={(e) => selectedProviderId === 'new'
-                          ? setNewProvider({ ...newProvider, email: e.target.value })
-                          : setEditProvider({ ...editProvider, email: e.target.value })}
+                        onChange={(e) =>
+                          selectedProviderId === 'new'
+                            ? setNewProvider({ ...newProvider, email: e.target.value })
+                            : setEditProvider({ ...editProvider, email: e.target.value })
+                        }
                       />
                       <Input
                         label="Phone"
                         placeholder="Provider contact phone"
                         value={selectedProviderId === 'new' ? newProvider.phone : editProvider.phone}
-                        onChange={(e) => selectedProviderId === 'new'
-                          ? setNewProvider({ ...newProvider, phone: e.target.value })
-                          : setEditProvider({ ...editProvider, phone: e.target.value })}
+                        onChange={(e) =>
+                          selectedProviderId === 'new'
+                            ? setNewProvider({ ...newProvider, phone: e.target.value })
+                            : setEditProvider({ ...editProvider, phone: e.target.value })
+                        }
                       />
                       <Input
                         label="City"
                         placeholder="City"
                         value={selectedProviderId === 'new' ? newProvider.city : editProvider.city}
-                        onChange={(e) => selectedProviderId === 'new'
-                          ? setNewProvider({ ...newProvider, city: e.target.value })
-                          : setEditProvider({ ...editProvider, city: e.target.value })}
+                        onChange={(e) =>
+                          selectedProviderId === 'new'
+                            ? setNewProvider({ ...newProvider, city: e.target.value })
+                            : setEditProvider({ ...editProvider, city: e.target.value })
+                        }
                         required
                       />
                       <Input
                         label="Address"
                         placeholder="Full address"
                         value={selectedProviderId === 'new' ? newProvider.address : editProvider.address}
-                        onChange={(e) => selectedProviderId === 'new'
-                          ? setNewProvider({ ...newProvider, address: e.target.value })
-                          : setEditProvider({ ...editProvider, address: e.target.value })}
+                        onChange={(e) =>
+                          selectedProviderId === 'new'
+                            ? setNewProvider({ ...newProvider, address: e.target.value })
+                            : setEditProvider({ ...editProvider, address: e.target.value })
+                        }
                         required
                       />
                       <div>
@@ -435,12 +508,16 @@ const ProfilePage: React.FC = () => {
                         <label className="block text-sm font-medium text-gray-700">Subcategory</label>
                         <select
                           value={selectedProviderId === 'new' ? newProvider.subcategory : editProvider.subcategory}
-                          onChange={(e) => selectedProviderId === 'new'
-                            ? setNewProvider({ ...newProvider, subcategory: e.target.value })
-                            : setEditProvider({ ...editProvider, subcategory: e.target.value })}
+                          onChange={(e) =>
+                            selectedProviderId === 'new'
+                              ? setNewProvider({ ...newProvider, subcategory: e.target.value })
+                              : setEditProvider({ ...editProvider, subcategory: e.target.value })
+                          }
                           className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                         >
-                          {categorySubcategories[selectedProviderId === 'new' ? newProvider.category : editProvider.category].map((subcat) => (
+                          {categorySubcategories[
+                            selectedProviderId === 'new' ? newProvider.category : editProvider.category
+                          ].map((subcat) => (
                             <option key={subcat} value={subcat}>{subcat}</option>
                           ))}
                         </select>
@@ -450,17 +527,21 @@ const ProfilePage: React.FC = () => {
                         placeholder="https://example.com"
                         type="url"
                         value={selectedProviderId === 'new' ? newProvider.website : editProvider.website}
-                        onChange={(e) => selectedProviderId === 'new'
-                          ? setNewProvider({ ...newProvider, website: e.target.value })
-                          : setEditProvider({ ...editProvider, website: e.target.value })}
+                        onChange={(e) =>
+                          selectedProviderId === 'new'
+                            ? setNewProvider({ ...newProvider, website: e.target.value })
+                            : setEditProvider({ ...editProvider, website: e.target.value })
+                        }
                       />
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Status</label>
                         <select
                           value={selectedProviderId === 'new' ? newProvider.status : editProvider.status}
-                          onChange={(e) => selectedProviderId === 'new'
-                            ? setNewProvider({ ...newProvider, status: e.target.value })
-                            : setEditProvider({ ...editProvider, status: e.target.value })}
+                          onChange={(e) =>
+                            selectedProviderId === 'new'
+                              ? setNewProvider({ ...newProvider, status: e.target.value })
+                              : setEditProvider({ ...editProvider, status: e.target.value })
+                          }
                           className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                         >
                           <option value="active">Active</option>
@@ -486,7 +567,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
-      <script src="https://www.paypal.com/sdk/js?client-id=your-sandbox-client-id&currency=USD" data-sdk-integration-source="integrationbuilder"></script>
+      <script src="https://www.paypal.com/sdk/js?client-id=your-sandbox-client-id¤cy=USD" data-sdk-integration-source="integrationbuilder"></script>
     </div>
   );
 };
