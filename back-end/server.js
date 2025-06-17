@@ -69,7 +69,7 @@ const verifyAdmin = async (req, res, next) => {
     res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
 };
- 
+
 async function initializeDatabase() {
   const connection = await pool.getConnection();
   try {
@@ -86,12 +86,15 @@ async function initializeDatabase() {
       );
     `);
 
-    const hashedPassword = await bcrypt.hash('Rememberme098!@#', 10);
+    const hashedPassword = await bcrypt.hash('Nairobi2026#', 10);
     await connection.query(
       `INSERT IGNORE INTO users (id, name, email, password, role, phone) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      ['admin1', 'BRIAN WACHIRA', 'branzwacchy12@gmail.com', hashedPassword, 'admin', '+254795373563'],
-      ['admin2', 'WANGUI MATHARU', 'wanguimatharu@gmail.com', hashedPassword, 'admin', '+12345567890']
+       VALUES (?, ?, ?, ?, ?, ?),
+              (?, ?, ?, ?, ?, ?)`,
+      [
+        'admin3', 'BRIAN WACHIRA', 'branzwacchy12@gmail.com', hashedPassword, 'admin', '+254795373563',
+        'admin4', 'WANGUI MATHARU', 'wanguimatharu@gmail.com', hashedPassword, 'admin', '+12345678901'
+      ]
     );
 
     await connection.query(`
@@ -134,94 +137,6 @@ async function initializeDatabase() {
         FOREIGN KEY (provider_id) REFERENCES providers(id)
       );
     `);
-
-    const sampleProviders = [
-      {
-        id: 'provider1',
-        name: 'Afro Chic Boutique',
-        username: 'afrochic',
-        address: '123 Fashion St, Muscat',
-        city: 'Muscat',
-        zip_code: '12345',
-        location: 'https://maps.google.com/?q=23.5859,58.4059',
-        phone: '+968 1234 5678',
-        email: 'contact@afrochic.com',
-        website: 'https://afrochic.com',
-        description: 'Specializing in African-inspired fashion',
-        images: JSON.stringify(['https://example.com/afrochic1.jpg', 'https://example.com/afrochic2.jpg']),
-        opening_hours: JSON.stringify({
-          monday: { open: '09:00', close: '18:00' },
-          tuesday: { open: '09:00', close: '18:00' },
-          wednesday: { open: '09:00', close: '18:00' },
-          thursday: { open: '09:00', close: '18:00' },
-          friday: { open: '09:00', close: '18:00' },
-          saturday: { open: '10:00', close: '16:00' },
-          sunday: { open: null, close: null },
-        }),
-        category: 'Products',
-        subcategory: 'Fashion & Apparel',
-        is_featured: true,
-      },
-    ];
-    for (const provider of sampleProviders) {
-      await connection.query(
-        `INSERT IGNORE INTO providers (id, name, username, city, zip_code, location, phone, email, website, description, images, opening_hours, category, subcategory, address, is_featured) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          provider.id,
-          provider.name,
-          provider.username,
-          provider.city,
-          provider.zip_code,
-          provider.location,
-          provider.phone,
-          provider.email,
-          provider.website,
-          provider.description,
-          provider.images,
-          provider.opening_hours,
-          provider.category,
-          provider.subcategory,
-          provider.address,
-          provider.is_featured,
-        ]
-      );
-    }
-
-    const sampleOffers = [
-      {
-        id: 'offer1',
-        provider_id: 'provider1',
-        name: 'Ankara Dress',
-        description: 'Custom-made Ankara dress',
-        price: 5000.00,
-        original_price: 6000.00,
-        discounted_price: 5000.00,
-        duration: 60,
-        category: 'Products',
-        subcategory: 'Fashion & Apparel',
-        image: 'https://example.com/ankara.jpg',
-      },
-    ];
-    for (const offer of sampleOffers) {
-      await connection.query(
-        `INSERT IGNORE INTO offers (id, provider_id, name, description, price, original_price, discounted_price, duration, category, subcategory, image) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          offer.id,
-          offer.provider_id,
-          offer.name,
-          offer.description,
-          offer.price,
-          offer.original_price,
-          offer.discounted_price,
-          offer.duration,
-          offer.category,
-          offer.subcategory,
-          offer.image,
-        ]
-      );
-    }
   } catch (error) {
     console.error('Database initialization error:', error);
   } finally {
@@ -671,7 +586,7 @@ app.get('/api/offers', async (req, res) => {
 // PUT /api/user endpoint
 app.put('/api/user', verifyToken, upload.single('avatar'), [
   body('name').notEmpty().isString(),
-  body('email').isEmail().normalizeEmail(),
+  body('email').notEmpty().isEmail().normalizeEmail(),
   body('phone').optional().isString(),
 ], async (req, res) => {
   console.log('Received PUT /api/user request with body:', req.body, 'and file:', req.file);
@@ -681,7 +596,7 @@ app.put('/api/user', verifyToken, upload.single('avatar'), [
   }
   const { name, email, phone } = req.body;
   const userId = req.user.id;
-  
+
   // Fetch current user to get existing avatar
   const [currentUser] = await pool.query('SELECT avatar FROM users WHERE id = ?', [userId]);
   const oldAvatar = currentUser[0]?.avatar || null;
@@ -713,6 +628,31 @@ app.put('/api/user', verifyToken, upload.single('avatar'), [
     res.status(200).json({ user: updatedUser[0] });
   } catch (error) {
     console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/user', verifyToken, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const [users] = await pool.query('SELECT id, name, email, role, avatar, phone, created_at FROM users WHERE id = ?', [userId]);
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const user = users[0];
+    res.status(200).json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar || undefined,
+        phone: user.phone || undefined,
+        createdAt: user.created_at.toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
