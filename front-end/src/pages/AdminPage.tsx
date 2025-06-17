@@ -279,6 +279,21 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleEditOffer = (offer: Offer) => {
+    setOfferId(offer.id);
+    setOfferForm({
+      ...offer,
+      providerId: offer.providerId || '',
+      name: offer.name || '',
+      price: offer.price || 0,
+      originalPrice: offer.originalPrice || 0,
+      discountedPrice: offer.discountedPrice || 0,
+      duration: offer.duration || 0,
+      category: offer.category || '',
+      subcategory: offer.subcategory || '',
+    });
+  };
+
   const handleDeleteOffer = async (id: string) => {
     try {
       await deleteOffer(id);
@@ -639,40 +654,43 @@ const AdminPage: React.FC = () => {
               </div>
 
               <div className="flex-1">
-                <div className="grid grid-cols-1 gap-4">
-                  {filteredProviders.length === 0 ? (
-                    <p className="text-gray-600">No providers found.</p>
-                  ) : (
-                    filteredProviders.map((provider) => (
-                      <div key={provider.id} className="border p-4 rounded-md flex justify-between items-center">
-                        <div>
-                          <h3 className="font-medium text-gray-900">{provider.name}</h3>
+                <div className="max-h-[600px] overflow-y-auto">
+                  <div className="grid grid-cols-1 gap-4">
+                    {filteredProviders.length === 0 ? (
+                      <p className="text-gray-600">No providers found.</p>
+                    ) : (
+                      filteredProviders.map((provider) => (
+                        <div key={provider.id} className="border p-4 rounded-md">
+                          <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
                           <p className="text-sm text-gray-600">{provider.city}</p>
                           <p className="text-sm text-gray-600">{provider.category} - {provider.subcategory}</p>
+                          {provider.description && (
+                            <p className="text-sm text-gray-600 mt-1">{provider.description}</p>
+                          )}
+                          <div className="flex space-x-2 mt-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => handleEditProvider(provider)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => handleDeleteProvider(provider.id)}
+                            >
+                              Delete
+                            </Button>
+                            <Button
+                              variant={provider.isFeatured ? 'primary' : 'outline'}
+                              onClick={() => handleSetFeatured(provider.id, !provider.isFeatured)}
+                            >
+                              {provider.isFeatured ? 'Unfeature' : 'Feature'}
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => handleEditProvider(provider)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => handleDeleteProvider(provider.id)}
-                          >
-                            Delete
-                          </Button>
-                          <Button
-                            variant={provider.isFeatured ? 'primary' : 'outline'}
-                            onClick={() => handleSetFeatured(provider.id, !provider.isFeatured)}
-                          >
-                            {provider.isFeatured ? 'Unfeature' : 'Feature'}
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -681,10 +699,19 @@ const AdminPage: React.FC = () => {
 
         <Card className="mb-8">
           <CardHeader>
-            <h2 className="text-2xl font-semibold text-gray-900">Manage Offers</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-semibold text-gray-900">Manage Offers</h2>
+              <Button onClick={() => {
+                setOfferForm({});
+                setOfferId('');
+              }}>
+                <Plus className="h-5 w-5 mr-2" />
+                Add Offer
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleOfferSubmit} className="space-y-4 mb-6">
+            <form onSubmit={handleOfferSubmit} className="space-y-4 mb-6 p-4 border rounded-md bg-gray-50">
               <Input
                 label="Offer ID (for update/delete)"
                 value={offerId}
@@ -694,11 +721,13 @@ const AdminPage: React.FC = () => {
                 label="Provider ID"
                 value={offerForm.providerId || ''}
                 onChange={(e) => setOfferForm({ ...offerForm, providerId: e.target.value })}
+                required
               />
               <Input
                 label="Name"
                 value={offerForm.name || ''}
                 onChange={(e) => setOfferForm({ ...offerForm, name: e.target.value })}
+                required
               />
               <Input
                 label="Price"
@@ -724,54 +753,132 @@ const AdminPage: React.FC = () => {
                 value={offerForm.duration || ''}
                 onChange={(e) => setOfferForm({ ...offerForm, duration: parseInt(e.target.value) })}
               />
-              <select
-                value={offerForm.category || ''}
-                onChange={(e) => setOfferForm({ ...offerForm, category: e.target.value })}
-                className="border rounded-md p-2"
-              >
-                <option value="">Select Category</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-              <select
-                value={offerForm.subcategory || ''}
-                onChange={(e) => setOfferForm({ ...offerForm, subcategory: e.target.value })}
-                className="border rounded-md p-2"
-                disabled={!offerForm.category}
-              >
-                <option value="">Select Subcategory</option>
-                {offerForm.category &&
-                  subcategories[offerForm.category]?.map((sub) => (
-                    <option key={sub} value={sub}>{sub}</option>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={offerForm.category || ''}
+                  onChange={(e) => setOfferForm({ ...offerForm, category: e.target.value, subcategory: subcategories[e.target.value]?.[0] || '' })}
+                  className="border rounded-md p-2 w-full"
+                  required
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
                   ))}
-              </select>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                <select
+                  value={offerForm.subcategory || ''}
+                  onChange={(e) => setOfferForm({ ...offerForm, subcategory: e.target.value })}
+                  className="border rounded-md p-2 w-full"
+                  disabled={!offerForm.category}
+                  required
+                >
+                  <option value="">Select Subcategory</option>
+                  {offerForm.category &&
+                    subcategories[offerForm.category]?.map((sub) => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                </select>
+              </div>
               <div className="flex space-x-4">
                 <Button type="submit">{offerId ? 'Update' : 'Create'} Offer</Button>
-                {offerId && (
-                  <Button variant="outline" onClick={() => handleDeleteOffer(offerId)}>
-                    Delete Offer
-                  </Button>
-                )}
               </div>
             </form>
-            <div className="grid grid-cols-1 gap-4">
-              {filteredOffers.map((offer) => (
-                <div key={offer.id} className="border p-4 rounded-md">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-medium">{offer.name}</h3>
-                      <p className="text-sm text-gray-600">{offer.category} - {offer.subcategory}</p>
+
+            <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
+              <form onSubmit={handleSearch} className="flex-1">
+                <Input
+                  name="search"
+                  type="text"
+                  placeholder="Search offers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  icon={<Search className="h-5 w-5 text-gray-400" />}
+                />
+              </form>
+              <div className="flex items-center space-x-4">
+                {(searchTerm || selectedCategory) && (
+                  <button
+                    onClick={clearFilters}
+                    className="flex items-center text-sm text-gray-600 hover:text-gray-900"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear filters
+                  </button>
+                )}
+                <Button
+                  onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
+                  variant="outline"
+                  className="md:hidden"
+                >
+                  <Filter className="h-5 w-5 mr-2" />
+                  Filters
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row">
+              <div className="hidden md:block w-64 mr-8">
+                <Card>
+                  <CardHeader>
+                    <h3 className="font-medium text-gray-900">Categories</h3>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {categories.map((category) => (
+                        <button
+                          key={category}
+                          onClick={() => handleCategoryClick(category)}
+                          className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
+                            selectedCategory === category
+                              ? 'bg-primary-100 text-primary-800 font-medium'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {category}
+                        </button>
+                      ))}
                     </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => setOfferId(offer.id)}
-                    >
-                      Edit
-                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="flex-1">
+                <div className="max-h-[600px] overflow-y-auto">
+                  <div className="grid grid-cols-1 gap-4">
+                    {filteredOffers.length === 0 ? (
+                      <p className="text-gray-600">No offers found.</p>
+                    ) : (
+                      filteredOffers.map((offer) => (
+                        <div key={offer.id} className="border p-4 rounded-md">
+                          <h3 className="text-lg font-semibold text-gray-900">{offer.name}</h3>
+                          <p className="text-sm text-gray-600">{offer.category} - {offer.subcategory}</p>
+                          {offer.description && (
+                            <p className="text-sm text-gray-600 mt-1">{offer.description}</p>
+                          )}
+                          <div className="flex space-x-2 mt-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => handleEditOffer(offer)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => handleDeleteOffer(offer.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
           </CardContent>
         </Card>
