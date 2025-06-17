@@ -259,7 +259,7 @@ const Navbar: React.FC = () => {
                   {user?.avatar ? (
                     <img
                       className="h-8 w-8 rounded-full"
-                      src={`${import.meta.env.VITE_API_URL}${user.avatar}`}
+                      src={`${user.avatar}`} alt={user.name}
                       alt={user.name}
                     />
                   ) : (
