@@ -290,7 +290,7 @@ const AdminPage: React.FC = () => {
       name: offer.name || '',
       price: offer.price || 0,
       originalPrice: offer.originalPrice || 0,
-      discountedPrice: offer ||.discountedPrice || 0,
+      discountedPrice: offer.discountedPrice || 0,
       duration: offer.duration || 0,
       category: offer.category || '',
       subcategory: offer.subcategory || '',
