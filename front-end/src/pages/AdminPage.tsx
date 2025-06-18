@@ -117,6 +117,7 @@ const AdminPage: React.FC = () => {
   } = useAdminStore();
 
   const [showProviderForm, setShowProviderForm] = useState(false);
+  const [showOfferForm, setShowOfferForm] = useState(false);
   const [providerForm, setProviderForm] = useState<Partial<Provider>>({});
   const [providerId, setProviderId] = useState('');
   const [offerForm, setOfferForm] = useState<Partial<Offer>>({});
@@ -273,6 +274,7 @@ const AdminPage: React.FC = () => {
       }
       setOfferForm({});
       setOfferId('');
+      setShowOfferForm(false);
       fetchOffers();
     } catch (error) {
       console.error('Error submitting offer:', error);
@@ -292,6 +294,7 @@ const AdminPage: React.FC = () => {
       category: offer.category || '',
       subcategory: offer.subcategory || '',
     });
+    setShowOfferForm(true);
   };
 
   const handleDeleteOffer = async (id: string) => {
@@ -556,6 +559,13 @@ const AdminPage: React.FC = () => {
                 />
                 <div className="flex space-x-4">
                   <Button type="submit">{providerId ? 'Update' : 'Create'} Provider</Button>
+                  <Button variant="outline" onClick={() => {
+                    setShowProviderForm(false);
+                    setProviderForm({});
+                    setProviderId('');
+                    setImageFiles([]);
+                    setExistingImages([]);
+                  }}>Cancel</Button>
                 </div>
               </form>
             )}
@@ -702,91 +712,99 @@ const AdminPage: React.FC = () => {
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-semibold text-gray-900">Manage Offers</h2>
               <Button onClick={() => {
+                setShowOfferForm(!showOfferForm);
                 setOfferForm({});
                 setOfferId('');
               }}>
                 <Plus className="h-5 w-5 mr-2" />
-                Add Offer
+                {showOfferForm ? 'Cancel' : 'Add Offer'}
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleOfferSubmit} className="space-y-4 mb-6 p-4 border rounded-md bg-gray-50">
-              <Input
-                label="Offer ID (for update/delete)"
-                value={offerId}
-                onChange={(e) => setOfferId(e.target.value)}
-              />
-              <Input
-                label="Provider ID"
-                value={offerForm.providerId || ''}
-                onChange={(e) => setOfferForm({ ...offerForm, providerId: e.target.value })}
-                required
-              />
-              <Input
-                label="Name"
-                value={offerForm.name || ''}
-                onChange={(e) => setOfferForm({ ...offerForm, name: e.target.value })}
-                required
-              />
-              <Input
-                label="Price"
-                type="number"
-                value={offerForm.price || ''}
-                onChange={(e) => setOfferForm({ ...offerForm, price: parseFloat(e.target.value) })}
-              />
-              <Input
-                label="Original Price"
-                type="number"
-                value={offerForm.originalPrice || ''}
-                onChange={(e) => setOfferForm({ ...offerForm, originalPrice: parseFloat(e.target.value) })}
-              />
-              <Input
-                label="Discounted Price"
-                type="number"
-                value={offerForm.discountedPrice || ''}
-                onChange={(e) => setOfferForm({ ...offerForm, discountedPrice: parseFloat(e.target.value) })}
-              />
-              <Input
-                label="Duration"
-                type="number"
-                value={offerForm.duration || ''}
-                onChange={(e) => setOfferForm({ ...offerForm, duration: parseInt(e.target.value) })}
-              />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={offerForm.category || ''}
-                  onChange={(e) => setOfferForm({ ...offerForm, category: e.target.value, subcategory: subcategories[e.target.value]?.[0] || '' })}
-                  className="border rounded-md p-2 w-full"
+            {showOfferForm && (
+              <form onSubmit={handleOfferSubmit} className="space-y-4 mb-6 p-4 border rounded-md bg-gray-50">
+                <Input
+                  label="Offer ID (for update/delete)"
+                  value={offerId}
+                  onChange={(e) => setOfferId(e.target.value)}
+                />
+                <Input
+                  label="Provider ID"
+                  value={offerForm.providerId || ''}
+                  onChange={(e) => setOfferForm({ ...offerForm, providerId: e.target.value })}
                   required
-                >
-                  <option value="">Select Category</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
-                <select
-                  value={offerForm.subcategory || ''}
-                  onChange={(e) => setOfferForm({ ...offerForm, subcategory: e.target.value })}
-                  className="border rounded-md p-2 w-full"
-                  disabled={!offerForm.category}
+                />
+                <Input
+                  label="Name"
+                  value={offerForm.name || ''}
+                  onChange={(e) => setOfferForm({ ...offerForm, name: e.target.value })}
                   required
-                >
-                  <option value="">Select Subcategory</option>
-                  {offerForm.category &&
-                    subcategories[offerForm.category]?.map((sub) => (
-                      <option key={sub} value={sub}>{sub}</option>
+                />
+                <Input
+                  label="Price"
+                  type="number"
+                  value={offerForm.price || ''}
+                  onChange={(e) => setOfferForm({ ...offerForm, price: parseFloat(e.target.value) })}
+                />
+                <Input
+                  label="Original Price"
+                  type="number"
+                  value={offerForm.originalPrice || ''}
+                  onChange={(e) => setOfferForm({ ...offerForm, originalPrice: parseFloat(e.target.value) })}
+                />
+                <Input
+                  label="Discounted Price"
+                  type="number"
+                  value={offerForm.discountedPrice || ''}
+                  onChange={(e) => setOfferForm({ ...offerForm, discountedPrice: parseFloat(e.target.value) })}
+                />
+                <Input
+                  label="Duration"
+                  type="number"
+                  value={offerForm.duration || ''}
+                  onChange={(e) => setOfferForm({ ...offerForm, duration: parseInt(e.target.value) })}
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    value={offerForm.category || ''}
+                    onChange={(e) => setOfferForm({ ...offerForm, category: e.target.value, subcategory: subcategories[e.target.value]?.[0] || '' })}
+                    className="border rounded-md p-2 w-full"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
                     ))}
-                </select>
-              </div>
-              <div className="flex space-x-4">
-                <Button type="submit">{offerId ? 'Update' : 'Create'} Offer</Button>
-              </div>
-            </form>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                  <select
+                    value={offerForm.subcategory || ''}
+                    onChange={(e) => setOfferForm({ ...offerForm, subcategory: e.target.value })}
+                    className="border rounded-md p-2 w-full"
+                    disabled={!offerForm.category}
+                    required
+                  >
+                    <option value="">Select Subcategory</option>
+                    {offerForm.category &&
+                      subcategories[offerForm.category]?.map((sub) => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                  </select>
+                </div>
+                <div className="flex space-x-4">
+                  <Button type="submit">{offerId ? 'Update' : 'Create'} Offer</Button>
+                  <Button variant="outline" onClick={() => {
+                    setShowOfferForm(false);
+                    setOfferForm({});
+                    setOfferId('');
+                  }}>Cancel</Button>
+                </div>
+              </form>
+            )}
 
             <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
               <form onSubmit={handleSearch} className="flex-1">
@@ -853,13 +871,15 @@ const AdminPage: React.FC = () => {
                       <p className="text-gray-600">No offers found.</p>
                     ) : (
                       filteredOffers.map((offer) => (
-                        <div key={offer.id} className="border p-4 rounded-md">
-                          <h3 className="text-lg font-semibold text-gray-900">{offer.name}</h3>
-                          <p className="text-sm text-gray-600">{offer.category} - {offer.subcategory}</p>
-                          {offer.description && (
-                            <p className="text-sm text-gray-600 mt-1">{offer.description}</p>
-                          )}
-                          <div className="flex space-x-2 mt-2">
+                        <div key={offer.id} className="border p-4 rounded-md flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                          <div className="mb-2 sm:mb-0">
+                            <h3 className="text-lg font-semibold text-gray-900">{offer.name}</h3>
+                            <p className="text-sm text-gray-600">{offer.category} - {offer.subcategory}</p>
+                            {offer.description && (
+                              <p className="text-sm text-gray-600 mt-1">{offer.description}</p>
+                            )}
+                          </div>
+                          <div className="flex space-x-2">
                             <Button
                               variant="outline"
                               onClick={() => handleEditOffer(offer)}
@@ -871,6 +891,15 @@ const AdminPage: React.FC = () => {
                               onClick={() => handleDeleteOffer(offer.id)}
                             >
                               Delete
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setOfferId('');
+                                setOfferForm({});
+                              }}
+                            >
+                              Cancel
                             </Button>
                           </div>
                         </div>
