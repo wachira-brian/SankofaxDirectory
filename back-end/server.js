@@ -33,7 +33,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Middleware to verify token (non-admin)
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -50,7 +49,6 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// Middleware to verify admin
 const verifyAdmin = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -188,7 +186,6 @@ app.post('/api/login', [
   }
 });
 
-// In server.js, add this after other routes
 app.post('/api/signup', [
   body('name').notEmpty().isString().trim(),
   body('email').isEmail().normalizeEmail(),
@@ -200,41 +197,26 @@ app.post('/api/signup', [
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-
   const { name, email, password, phone, avatar } = req.body;
-
   try {
-    // Check if email already exists
     const [existingUsers] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
     if (existingUsers.length > 0) {
       return res.status(400).json({ error: 'Email already in use' });
     }
-
-    // Generate unique user ID
     const userId = `user${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insert new user
     await pool.query(
       `INSERT INTO users (id, name, email, password, role, phone, avatar) 
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [userId, name, email, hashedPassword, 'user', phone || null, avatar || null]
     );
-
-    // Fetch the newly created user
     const [users] = await pool.query('SELECT id, name, email, role, phone, avatar, created_at FROM users WHERE id = ?', [userId]);
     const user = users[0];
-
-    // Generate JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '1d' }
     );
-
-    // Return user and token
     res.status(201).json({
       user: {
         id: user.id,
@@ -252,8 +234,6 @@ app.post('/api/signup', [
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-
 
 app.get('/api/admin/users/count', verifyAdmin, async (req, res) => {
   try {
@@ -341,14 +321,13 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-  const { id, name, username, city, zipCode, phone, email, website, description, category, subcategory, openingHours, location, address } = req.body;
+  const { id, name, username, city, zip_code, phone, email, website, description, category, subcategory, opening_hours, location, address } = req.body;
   const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
   let parsedOpeningHours = '{}';
   try {
-    if (openingHours) {
-      const cleanedOpeningHours = JSON.parse(openingHours.replace(/\\"/g, '"'));
-      parsedOpeningHours = JSON.stringify(cleanedOpeningHours);
+    if (opening_hours) {
+      parsedOpeningHours = opening_hours; // Trust frontend's JSON string
     }
   } catch (e) {
     console.error('Invalid openingHours format:', e);
@@ -360,7 +339,7 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
       `INSERT INTO providers (id, name, username, city, zip_code, location, phone, email, website, description, images, opening_hours, category, subcategory, address, is_featured, updated_at) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        id || null, name, username, city, zipCode || null, location || null,
+        id || null, name, username, city, zip_code || null, location || null,
         phone || null, email || null, website || null, description || null, JSON.stringify(images),
         parsedOpeningHours, category, subcategory, address || null, 0,
       ]
@@ -380,37 +359,56 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
   body('subcategory').notEmpty().isString(),
   body('location').optional().isString(),
   body('address').optional().isString(),
+  body('zip_code').optional().isString(),
+  body('phone').optional().isString(),
+  body('email').optional().isEmail(),
+  body('website').optional().isURL(),
+  body('description').optional().isString(),
+  body('opening_hours').optional().isString(),
+  body('existingImages').optional().isString(),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
   const { id } = req.params;
-  const { name, username, city, zipCode, phone, email, website, description, category, subcategory, openingHours, location, address } = req.body;
-  const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
+  const { name, username, city, zip_code, phone, email, website, description, category, subcategory, opening_hours, location, address, existingImages } = req.body;
+  const newImages = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
+
   try {
     const [existingProvider] = await pool.query('SELECT images, opening_hours FROM providers WHERE id = ?', [id]);
-    const currentImages = JSON.parse(existingProvider[0]?.images || '[]');
-    const updatedImages = images.length > 0 ? [...currentImages, ...images] : currentImages;
+    if (!existingProvider[0]) {
+      return res.status(404).json({ error: 'Provider not found' });
+    }
 
-    let updatedOpeningHours = JSON.parse(existingProvider[0]?.opening_hours || '{}');
-    if (openingHours) {
+    let currentImages = [];
+    try {
+      currentImages = existingImages ? JSON.parse(existingImages) : JSON.parse(existingProvider[0].images || '[]');
+    } catch (e) {
+      console.error(`Invalid existingImages JSON for provider ${id}:`, existingImages || existingProvider[0].images);
+      return res.status(400).json({ error: 'Invalid existingImages format' });
+    }
+
+    const updatedImages = [...currentImages, ...newImages];
+
+    let updatedOpeningHours = existingProvider[0].opening_hours || '{}';
+    if (opening_hours) {
       try {
-        const cleanedOpeningHours = JSON.parse(openingHours.replace(/\\"/g, '"'));
-        updatedOpeningHours = cleanedOpeningHours;
+        JSON.parse(opening_hours); // Validate JSON
+        updatedOpeningHours = opening_hours;
       } catch (e) {
-        console.error('Invalid openingHours format:', e);
-        return res.status(400).json({ error: 'Invalid openingHours format' });
+        console.error('Invalid opening_hours format:', e);
+        return res.status(400).json({ error: 'Invalid opening_hours format' });
       }
     }
 
     const [result] = await pool.query(
       `UPDATE providers SET name = ?, username = ?, city = ?, zip_code = ?, phone = ?, email = ?, 
-       website = ?, description = ?, images = ?, opening_hours = ?, category = ?, subcategory = ?, address = ?, location = ? WHERE id = ?`,
+       website = ?, description = ?, images = ?, opening_hours = ?, category = ?, subcategory = ?, address = ?, location = ?, updated_at = NOW() WHERE id = ?`,
       [
-        name, username, city, zipCode || null, phone || null, email || null,
+        name, username, city, zip_code || null, phone || null, email || null,
         website || null, description || null, JSON.stringify(updatedImages),
-        JSON.stringify(updatedOpeningHours), category, subcategory, address || null, location || null, id,
+        updatedOpeningHours, category, subcategory, address || null, location || null, id,
       ]
     );
     if (result.affectedRows === 0) {
@@ -418,7 +416,7 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
     }
     res.status(200).json({ message: 'Provider updated successfully' });
   } catch (error) {
-    console.error('Error updating provider:', error);
+    console.error('Error updating provider:', error.message, error.stack);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -678,7 +676,6 @@ app.get('/api/offers', async (req, res) => {
   }
 });
 
-// PUT /api/user endpoint
 app.put('/api/user', verifyToken, upload.single('avatar'), [
   body('name').notEmpty().isString(),
   body('email').notEmpty().isEmail().normalizeEmail(),
@@ -691,15 +688,10 @@ app.put('/api/user', verifyToken, upload.single('avatar'), [
   }
   const { name, email, phone } = req.body;
   const userId = req.user.id;
-
-  // Fetch current user to get existing avatar
-  const [currentUser] = await pool.query('SELECT avatar FROM users WHERE id = ?', [userId]);
   const oldAvatar = currentUser[0]?.avatar || null;
-  let newAvatar = oldAvatar; // Default to existing avatar if no new file
-
+  let newAvatar = oldAvatar;
   if (req.file) {
     newAvatar = `/uploads/${req.file.filename}`;
-    // Delete old avatar file if it exists and is different from the new one
     if (oldAvatar && oldAvatar !== newAvatar) {
       try {
         await fs.unlink(`.${oldAvatar}`);
@@ -709,7 +701,6 @@ app.put('/api/user', verifyToken, upload.single('avatar'), [
       }
     }
   }
-
   try {
     const [result] = await pool.query(
       `UPDATE users SET name = ?, email = ?, phone = ?, avatar = ? WHERE id = ?`,
