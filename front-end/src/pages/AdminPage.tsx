@@ -1,4 +1,7 @@
 import React, { useEffect, useState, ChangeEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import jwtDecode from 'jwt-decode';
 import { useAdminStore } from '../store/adminStore';
 import { Provider, Offer } from '../store/providerStore';
 import { Search, X, Filter, Plus } from 'lucide-react';
@@ -97,7 +100,16 @@ const dayMap: Record<string, string> = {
   sun: 'sunday',
 };
 
+interface JwtPayload {
+  id: string;
+  email: string;
+  role: string;
+}
+
 const AdminPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+
   const {
     providers,
     offers,
@@ -138,11 +150,51 @@ const AdminPage: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchProviders();
-    fetchOffers();
-    fetchUserCount();
-    fetchAdmins();
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsAuthorized(false);
+        return;
+      }
+      try {
+        const decoded: JwtPayload = jwtDecode(token);
+        if (decoded.role !== 'admin') {
+          setIsAuthorized(false);
+          return;
+        }
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/user`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.data.user.role === 'admin') {
+          setIsAuthorized(true);
+          fetchProviders();
+          fetchOffers();
+          fetchUserCount();
+          fetchAdmins();
+        } else {
+          setIsAuthorized(false);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthorized(false);
+      }
+    };
+    checkAuth();
   }, [fetchProviders, fetchOffers, fetchUserCount, fetchAdmins]);
+
+  useEffect(() => {
+    if (isAuthorized === false) {
+      navigate('/login');
+    }
+  }, [isAuthorized, navigate]);
+
+  if (isAuthorized === null) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isAuthorized) {
+    return null; // Redirect handled by useEffect
+  }
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -181,7 +233,7 @@ const AdminPage: React.FC = () => {
     try {
       const formData = new FormData();
       imageFiles.forEach((file) => formData.append('images', file));
-      formData.append('images', JSON.stringify(existingImages));
+      formData.append('existingImages', JSON.stringify(existingImages));
       formData.append('username', providerForm.username || '');
       formData.append('name', providerForm.name || '');
       formData.append('city', providerForm.city || '');
