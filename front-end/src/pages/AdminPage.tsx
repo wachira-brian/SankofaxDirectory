@@ -1,7 +1,7 @@
+
 import React, { useEffect, useState, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import jwtDecode from 'jwt-decode';
 import { useAdminStore } from '../store/adminStore';
 import { Provider, Offer } from '../store/providerStore';
 import { Search, X, Filter, Plus } from 'lucide-react';
@@ -100,12 +100,6 @@ const dayMap: Record<string, string> = {
   sun: 'sunday',
 };
 
-interface JwtPayload {
-  id: string;
-  email: string;
-  role: string;
-}
-
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
@@ -157,11 +151,6 @@ const AdminPage: React.FC = () => {
         return;
       }
       try {
-        const decoded: JwtPayload = jwtDecode(token);
-        if (decoded.role !== 'admin') {
-          setIsAuthorized(false);
-          return;
-        }
         const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/user`, {
           headers: { Authorization: `Bearer ${token}` },
         });
