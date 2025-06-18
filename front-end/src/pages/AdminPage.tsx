@@ -181,7 +181,7 @@ const AdminPage: React.FC = () => {
     try {
       const formData = new FormData();
       imageFiles.forEach((file) => formData.append('images', file));
-      formData.append('existingImages', JSON.stringify(existingImages));
+      formData.append('images', JSON.stringify(existingImages));
       formData.append('username', providerForm.username || '');
       formData.append('name', providerForm.name || '');
       formData.append('city', providerForm.city || '');
@@ -220,7 +220,7 @@ const AdminPage: React.FC = () => {
       setShowProviderForm(false);
       fetchProviders();
     } catch (error) {
-      console.error('Error submitting provider:', error);
+      console.error('Error submitting provider:', error.response?.data || error.message);
     }
   };
 
@@ -573,7 +573,7 @@ const AdminPage: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
               <form onSubmit={handleSearch} className="flex-1">
                 <Input
-                  name="search"
+                  name="type"
                   type="text"
                   placeholder="Search providers..."
                   value={searchTerm}
@@ -581,7 +581,7 @@ const AdminPage: React.FC = () => {
                   icon={<Search className="h-5 w-5 text-gray-400" />}
                 />
               </form>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
                 {(searchTerm || selectedCategory) && (
                   <button
                     onClick={clearFilters}
@@ -607,9 +607,9 @@ const AdminPage: React.FC = () => {
                 <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsMobileFilterOpen(false)}></div>
                 <div className="absolute right-0 top-0 h-full w-3/4 max-w-xs bg-white shadow-xl flex flex-col">
                   <div className="flex items-center justify-between p-4 border-b">
-                    <h3 className="font-medium text-gray-900">Filters</h3>
+                    <h4 className="font-medium text-gray-900">Filters</h4>
                     <button onClick={() => setIsMobileFilterOpen(false)}>
-                      <X className="h-5 w-5 text-gray-500" />
+                      <X className="h-5 w-5 w-5 text-gray-500" />
                     </button>
                   </div>
                   <div className="p-4 overflow-y-auto">
@@ -625,7 +625,7 @@ const AdminPage: React.FC = () => {
                           className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
                             selectedCategory === category
                               ? 'bg-primary-100 text-primary-800 font-medium'
-                              : 'text-gray-700 hover:bg-gray-100'
+                            : 'text-gray-700 hover:bg-gray-100'
                           }`}
                         >
                           {category}
@@ -635,7 +635,6 @@ const AdminPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            )}
 
             <div className="flex flex-col md:flex-row">
               <div className="hidden md:block w-64 mr-8">
@@ -649,7 +648,7 @@ const AdminPage: React.FC = () => {
                         <button
                           key={category}
                           onClick={() => handleCategoryClick(category)}
-                          className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
+                          className={`block w-full text-left px-4 py-2 text-sm rounded-md ${
                             selectedCategory === category
                               ? 'bg-primary-100 text-primary-800 font-medium'
                               : 'text-gray-700 hover:bg-gray-100'
@@ -662,7 +661,6 @@ const AdminPage: React.FC = () => {
                   </CardContent>
                 </Card>
               </div>
-
               <div className="flex-1">
                 <div className="max-h-[600px] overflow-y-auto">
                   <div className="grid grid-cols-1 gap-4">
@@ -698,8 +696,8 @@ const AdminPage: React.FC = () => {
                             </Button>
                           </div>
                         </div>
-                      ))
-                    )}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -723,9 +721,9 @@ const AdminPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             {showOfferForm && (
-              <form onSubmit={handleOfferSubmit} className="space-y-4 mb-6 p-4 border rounded-md bg-gray-50">
+              <form onSubmit={handleOfferSubmit} className="space-y-4 mb-6 p-4 rounded-md bg-gray-50">
                 <Input
-                  label="Offer ID (for update/delete)"
+                  label="Offer ID (e.g., for updating)"
                   value={offerId}
                   onChange={(e) => setOfferId(e.target.value)}
                 />
@@ -795,18 +793,20 @@ const AdminPage: React.FC = () => {
                       ))}
                   </select>
                 </div>
-                <div className="flex space-x-4">
+                <div className="flex space-x-2">
                   <Button type="submit">{offerId ? 'Update' : 'Create'} Offer</Button>
-                  <Button variant="outline" onClick={() => {
-                    setShowOfferForm(false);
-                    setOfferForm({});
-                    setOfferId('');
-                  }}>Cancel</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowOfferForm(false);
+                      setOfferForm({});
+                      setOfferId('');
+                    }}
+                  >Cancel</Button>
                 </div>
               </form>
-            )}
-
-            <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
+            ))}
+            <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4 mb-6">
               <form onSubmit={handleSearch} className="flex-1">
                 <Input
                   name="search"
@@ -837,7 +837,6 @@ const AdminPage: React.FC = () => {
                 </Button>
               </div>
             </div>
-
             <div className="flex flex-col md:flex-row">
               <div className="hidden md:block w-64 mr-8">
                 <Card>
@@ -850,10 +849,10 @@ const AdminPage: React.FC = () => {
                         <button
                           key={category}
                           onClick={() => handleCategoryClick(category)}
-                          className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
+                          className={`block w-full text-left px-4 py-2 text-sm rounded-md ${
                             selectedCategory === category
                               ? 'bg-primary-100 text-primary-800 font-medium'
-                              : 'text-gray-700 hover:bg-gray-100'
+                              : 'text-gray-700 hover-bg-gray-100'
                           }`}
                         >
                           {category}
@@ -863,7 +862,6 @@ const AdminPage: React.FC = () => {
                   </CardContent>
                 </Card>
               </div>
-
               <div className="flex-1">
                 <div className="max-h-[600px] overflow-y-auto">
                   <div className="grid grid-cols-1 gap-4">
@@ -871,15 +869,15 @@ const AdminPage: React.FC = () => {
                       <p className="text-gray-600">No offers found.</p>
                     ) : (
                       filteredOffers.map((offer) => (
-                        <div key={offer.id} className="border p-4 rounded-md flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                          <div className="mb-2 sm:mb-0">
+                        <div key={offer.id} className="border p-4 rounded-md flex flex-col sm:flex sm:items-start sm:gap-4">
+                          <div className="sm:flex-1">
                             <h3 className="text-lg font-semibold text-gray-900">{offer.name}</h3>
                             <p className="text-sm text-gray-600">{offer.category} - {offer.subcategory}</p>
                             {offer.description && (
-                              <p className="text-sm text-gray-600 mt-1">{offer.description}</p>
+                              <p className="text-sm text-gray-600 mt-2">{offer.description}</p>
                             )}
                           </div>
-                          <div className="flex space-x-2">
+                          <div className="flex space-x-2 mt-2 sm:mt-0 sm:flex-none">
                             <Button
                               variant="outline"
                               onClick={() => handleEditOffer(offer)}
@@ -905,6 +903,7 @@ const AdminPage: React.FC = () => {
                         </div>
                       ))
                     )}
+                    </div>
                   </div>
                 </div>
               </div>
