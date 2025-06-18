@@ -220,7 +220,7 @@ const AdminPage: React.FC = () => {
       setShowProviderForm(false);
       fetchProviders();
     } catch (error) {
-      console.error('Error submitting provider:', error.response?.data || error.message);
+      console.error('Error submitting provider:', error);
     }
   };
 
@@ -321,21 +321,19 @@ const AdminPage: React.FC = () => {
     setSelectedCategory(null);
   };
 
-  const filteredProviders = providers.filter(
-    (p) =>
-      (!selectedCategory || p.category === selectedCategory) &&
-      (!searchTerm ||
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.address?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false))
-  );
+  const filteredProviders = providers.filter((p) => (
+    (!selectedCategory || p.category === selectedCategory) &&
+    (!searchTerm ||
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.address && p.address.toLowerCase().includes(searchTerm.toLowerCase())))
+  ));
 
-  const filteredOffers = offers.filter(
-    (o) =>
-      (!selectedCategory || o.category === selectedCategory) &&
-      (!searchTerm ||
-        o.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (o.description && o.description.toLowerCase().includes(searchTerm.toLowerCase())))
-  );
+  const filteredOffers = offers.filter((o) => (
+    (!selectedCategory || o.category === selectedCategory) &&
+    (!searchTerm ||
+      o.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (o.description && o.description.toLowerCase().includes(searchTerm.toLowerCase())))
+  ));
 
   return (
     <div className="min-h-screen pt-16 bg-gray-50">
