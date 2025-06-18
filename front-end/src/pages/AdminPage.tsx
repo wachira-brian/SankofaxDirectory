@@ -257,11 +257,10 @@ const AdminPage: React.FC = () => {
 
   const handleSetFeatured = async (id: string, featured: boolean) => {
     try {
-      await setFeatured(id, featured);
-      setFeaturedProvider(id, featured);
+      await setFeaturedProvider(id, featured);
       fetchProviders();
     } catch (error) {
-      console.error('Error updating featured provider:', error);
+      console.error('Error updating featured status:', error);
     }
   };
 
@@ -275,7 +274,7 @@ const AdminPage: React.FC = () => {
       }
       setOfferForm({});
       setOfferId('');
-      setShowOfferForm(true);
+      setShowOfferForm(false);
       fetchOffers();
     } catch (error) {
       console.error('Error submitting offer:', error);
@@ -307,14 +306,13 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>): void => {
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const searchedTerm = formData.get('searched') as string;
-    setSearchTerm(searchedTerm);
+    setSearchTerm(formData.get('search') as string);
   };
 
-  const handleCategoryClick = (category: string): void => {
+  const handleCategoryClick = (category: string) => {
     setSelectedCategory(category === selectedCategory ? null : category);
   };
 
@@ -327,24 +325,24 @@ const AdminPage: React.FC = () => {
     (p) =>
       (!selectedCategory || p.category === selectedCategory) &&
       (!searchTerm ||
-        p.name?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
-        (p.address?.toLowerCase()?.includes(searchTerm.toLowerCase()) ?? false))
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.address?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false))
   );
 
   const filteredOffers = offers.filter(
     (o) =>
       (!selectedCategory || o.category === selectedCategory) &&
       (!searchTerm ||
-        o.name.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
-        (o.description && o.description.toLowerCase()?.includes(searchTerm.toLowerCase())))
-  ));
+        o.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (o.description && o.description.toLowerCase().includes(searchTerm.toLowerCase())))
+  );
 
   return (
-    <div className="min-h-screen pt-[-16px bg-gray-50">
-      <div className="max-w-7xl mx-auto px-[-4 sm:px-6 lg:[-px8 py]-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-[-8">Admin Dashboard</h1>
+    <div className="min-h-screen pt-16 bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
 
-        <div className="grid grid-cols-[-1 md:grid-cols-2 gap-[-6] mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader>
               <h3 className="text-lg font-semibold text-gray-900">Total Users</h3>
@@ -583,7 +581,7 @@ const AdminPage: React.FC = () => {
                   icon={<Search className="h-5 w-5 text-gray-400" />}
                 />
               </form>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
                 {(searchTerm || selectedCategory) && (
                   <button
                     onClick={clearFilters}
@@ -651,7 +649,7 @@ const AdminPage: React.FC = () => {
                         <button
                           key={category}
                           onClick={() => handleCategoryClick(category)}
-                          className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
+                          className={`block w-full text-left px-4 py-2 text-sm rounded-md ${
                             selectedCategory === category
                               ? 'bg-primary-100 text-primary-800 font-medium'
                               : 'text-gray-700 hover:bg-gray-100'
@@ -886,7 +884,7 @@ const AdminPage: React.FC = () => {
                         <button
                           key={category}
                           onClick={() => handleCategoryClick(category)}
-                          className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
+                          className={`block w-full text-left px-4 py-2 text-sm rounded-md ${
                             selectedCategory === category
                               ? 'bg-primary-100 text-primary-800 font-medium'
                               : 'text-gray-700 hover:bg-gray-100'
