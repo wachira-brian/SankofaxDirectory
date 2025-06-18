@@ -257,10 +257,11 @@ const AdminPage: React.FC = () => {
 
   const handleSetFeatured = async (id: string, featured: boolean) => {
     try {
-      await setFeaturedProvider(id, featured);
+      await setFeatured(id, featured);
+      setFeaturedProvider(id, featured);
       fetchProviders();
     } catch (error) {
-      console.error('Error updating featured status:', error);
+      console.error('Error updating featured provider:', error);
     }
   };
 
@@ -274,7 +275,7 @@ const AdminPage: React.FC = () => {
       }
       setOfferForm({});
       setOfferId('');
-      setShowOfferForm(false);
+      setShowOfferForm(true);
       fetchOffers();
     } catch (error) {
       console.error('Error submitting offer:', error);
@@ -282,14 +283,14 @@ const AdminPage: React.FC = () => {
   };
 
   const handleEditOffer = (offer: Offer) => {
-    setOfferId(offer.id);
+    setOfferId(offer.id || '');
     setOfferForm({
       ...offer,
       providerId: offer.providerId || '',
       name: offer.name || '',
       price: offer.price || 0,
       originalPrice: offer.originalPrice || 0,
-      discountedPrice: offer.discountedPrice || 0,
+      discountedPrice: offer ||.discountedPrice || 0,
       duration: offer.duration || 0,
       category: offer.category || '',
       subcategory: offer.subcategory || '',
@@ -306,13 +307,14 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    setSearchTerm(formData.get('search') as string);
+    const searchedTerm = formData.get('searched') as string;
+    setSearchTerm(searchedTerm);
   };
 
-  const handleCategoryClick = (category: string) => {
+  const handleCategoryClick = (category: string): void => {
     setSelectedCategory(category === selectedCategory ? null : category);
   };
 
@@ -325,24 +327,24 @@ const AdminPage: React.FC = () => {
     (p) =>
       (!selectedCategory || p.category === selectedCategory) &&
       (!searchTerm ||
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.address?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false))
+        p.name?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+        (p.address?.toLowerCase()?.includes(searchTerm.toLowerCase()) ?? false))
   );
 
   const filteredOffers = offers.filter(
     (o) =>
       (!selectedCategory || o.category === selectedCategory) &&
       (!searchTerm ||
-        o.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (o.description && o.description.toLowerCase().includes(searchTerm.toLowerCase())))
-  );
+        o.name.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+        (o.description && o.description.toLowerCase()?.includes(searchTerm.toLowerCase())))
+  ));
 
   return (
-    <div className="min-h-screen pt-16 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
+    <div className="min-h-screen pt-[-16px bg-gray-50">
+      <div className="max-w-7xl mx-auto px-[-4 sm:px-6 lg:[-px8 py]-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-[-8">Admin Dashboard</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-[-1 md:grid-cols-2 gap-[-6] mb-8">
           <Card>
             <CardHeader>
               <h3 className="text-lg font-semibold text-gray-900">Total Users</h3>
@@ -573,7 +575,7 @@ const AdminPage: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
               <form onSubmit={handleSearch} className="flex-1">
                 <Input
-                  name="type"
+                  name="search"
                   type="text"
                   placeholder="Search providers..."
                   value={searchTerm}
@@ -581,7 +583,7 @@ const AdminPage: React.FC = () => {
                   icon={<Search className="h-5 w-5 text-gray-400" />}
                 />
               </form>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-4">
                 {(searchTerm || selectedCategory) && (
                   <button
                     onClick={clearFilters}
@@ -609,7 +611,7 @@ const AdminPage: React.FC = () => {
                   <div className="flex items-center justify-between p-4 border-b">
                     <h4 className="font-medium text-gray-900">Filters</h4>
                     <button onClick={() => setIsMobileFilterOpen(false)}>
-                      <X className="h-5 w-5 w-5 text-gray-500" />
+                      <X className="h-5 w-5 text-gray-500" />
                     </button>
                   </div>
                   <div className="p-4 overflow-y-auto">
@@ -625,7 +627,7 @@ const AdminPage: React.FC = () => {
                           className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
                             selectedCategory === category
                               ? 'bg-primary-100 text-primary-800 font-medium'
-                            : 'text-gray-700 hover:bg-gray-100'
+                              : 'text-gray-700 hover:bg-gray-100'
                           }`}
                         >
                           {category}
@@ -635,6 +637,7 @@ const AdminPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+            )}
 
             <div className="flex flex-col md:flex-row">
               <div className="hidden md:block w-64 mr-8">
@@ -648,7 +651,7 @@ const AdminPage: React.FC = () => {
                         <button
                           key={category}
                           onClick={() => handleCategoryClick(category)}
-                          className={`block w-full text-left px-4 py-2 text-sm rounded-md ${
+                          className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
                             selectedCategory === category
                               ? 'bg-primary-100 text-primary-800 font-medium'
                               : 'text-gray-700 hover:bg-gray-100'
@@ -696,8 +699,8 @@ const AdminPage: React.FC = () => {
                             </Button>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -721,9 +724,9 @@ const AdminPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             {showOfferForm && (
-              <form onSubmit={handleOfferSubmit} className="space-y-4 mb-6 p-4 rounded-md bg-gray-50">
+              <form onSubmit={handleOfferSubmit} className="space-y-4 mb-6 p-4 border rounded-md bg-gray-50">
                 <Input
-                  label="Offer ID (e.g., for updating)"
+                  label="Offer ID (for update/delete)"
                   value={offerId}
                   onChange={(e) => setOfferId(e.target.value)}
                 />
@@ -793,20 +796,18 @@ const AdminPage: React.FC = () => {
                       ))}
                   </select>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex space-x-4">
                   <Button type="submit">{offerId ? 'Update' : 'Create'} Offer</Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowOfferForm(false);
-                      setOfferForm({});
-                      setOfferId('');
-                    }}
-                  >Cancel</Button>
+                  <Button variant="outline" onClick={() => {
+                    setShowOfferForm(false);
+                    setOfferForm({});
+                    setOfferId('');
+                  }}>Cancel</Button>
                 </div>
               </form>
-            ))}
-            <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4 mb-6">
+            )}
+
+            <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
               <form onSubmit={handleSearch} className="flex-1">
                 <Input
                   name="search"
@@ -837,6 +838,42 @@ const AdminPage: React.FC = () => {
                 </Button>
               </div>
             </div>
+
+            {isMobileFilterOpen && (
+              <div className="fixed inset-0 z-40 md:hidden">
+                <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsMobileFilterOpen(false)}></div>
+                <div className="absolute right-0 top-0 h-full w-3/4 max-w-xs bg-white shadow-xl flex flex-col">
+                  <div className="flex items-center justify-between p-4 border-b">
+                    <h4 className="font-medium text-gray-900">Filters</h4>
+                    <button onClick={() => setIsMobileFilterOpen(false)}>
+                      <X className="h-5 w-5 text-gray-500" />
+                    </button>
+                  </div>
+                  <div className="p-4 overflow-y-auto">
+                    <h4 className="font-medium text-gray-900 mb-3">Categories</h4>
+                    <div className="space-y-2">
+                      {categories.map((category) => (
+                        <button
+                          key={category}
+                          onClick={() => {
+                            handleCategoryClick(category);
+                            setIsMobileFilterOpen(false);
+                          }}
+                          className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
+                            selectedCategory === category
+                              ? 'bg-primary-100 text-primary-800 font-medium'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {category}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col md:flex-row">
               <div className="hidden md:block w-64 mr-8">
                 <Card>
@@ -849,10 +886,10 @@ const AdminPage: React.FC = () => {
                         <button
                           key={category}
                           onClick={() => handleCategoryClick(category)}
-                          className={`block w-full text-left px-4 py-2 text-sm rounded-md ${
+                          className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
                             selectedCategory === category
                               ? 'bg-primary-100 text-primary-800 font-medium'
-                              : 'text-gray-700 hover-bg-gray-100'
+                              : 'text-gray-700 hover:bg-gray-100'
                           }`}
                         >
                           {category}
@@ -874,7 +911,7 @@ const AdminPage: React.FC = () => {
                             <h3 className="text-lg font-semibold text-gray-900">{offer.name}</h3>
                             <p className="text-sm text-gray-600">{offer.category} - {offer.subcategory}</p>
                             {offer.description && (
-                              <p className="text-sm text-gray-600 mt-2">{offer.description}</p>
+                              <p className="text-sm text-gray-600 mt-1">{offer.description}</p>
                             )}
                           </div>
                           <div className="flex space-x-2 mt-2 sm:mt-0 sm:flex-none">
@@ -903,7 +940,6 @@ const AdminPage: React.FC = () => {
                         </div>
                       ))
                     )}
-                    </div>
                   </div>
                 </div>
               </div>
