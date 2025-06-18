@@ -667,14 +667,16 @@ const AdminPage: React.FC = () => {
                       <p className="text-gray-600">No providers found.</p>
                     ) : (
                       filteredProviders.map((provider) => (
-                        <div key={provider.id} className="border p-4 rounded-md">
-                          <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
-                          <p className="text-sm text-gray-600">{provider.city}</p>
-                          <p className="text-sm text-gray-600">{provider.category} - {provider.subcategory}</p>
-                          {provider.description && (
-                            <p className="text-sm text-gray-600 mt-1">{provider.description}</p>
-                          )}
-                          <div className="flex space-x-2 mt-2">
+                        <div key={provider.id} className="border p-4 rounded-md flex flex-col sm:flex sm:items-start sm:gap-4">
+                          <div className="sm:flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
+                            <p className="text-sm text-gray-600">{provider.city}</p>
+                            <p className="text-sm text-gray-600">{provider.category} - {provider.subcategory}</p>
+                            {provider.description && (
+                              <p className="text-sm text-gray-600 mt-1">{provider.description}</p>
+                            )}
+                          </div>
+                          <div className="flex space-x-2 mt-2 sm:mt-0 sm:flex-none">
                             <Button
                               variant="outline"
                               onClick={() => handleEditProvider(provider)}
