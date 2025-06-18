@@ -119,7 +119,7 @@ const SignupPage: React.FC = () => {
       >
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Create your account</h1>
-          <p className="mt-2 text-gray-600">Join Sankofax to discover and book salon services</p>
+          <p className="mt-2 text-gray-600">Join Sankofax to add yor products and services for Listing</p>
         </div>
 
         <Card>
