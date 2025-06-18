@@ -12,8 +12,14 @@ const fs = require('fs').promises;
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Validate environment variables
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET is not defined in .env');
+}
+
+// Database connection pool
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -22,6 +28,11 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+});
+
+// Handle database connection errors
+pool.on('error', (err) => {
+  console.error('Database pool error:', err);
 });
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -137,12 +148,16 @@ async function initializeDatabase() {
     `);
   } catch (error) {
     console.error('Database initialization error:', error);
+    throw error; // Stop server startup on failure
   } finally {
     connection.release();
   }
 }
 
-initializeDatabase().then(() => console.log('Database initialized'));
+initializeDatabase().then(() => console.log('Database initialized')).catch((err) => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
+});
 
 app.post('/api/login', [
   body('email').isEmail().normalizeEmail(),
@@ -339,9 +354,11 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
       `INSERT INTO providers (id, name, username, city, zip_code, location, phone, email, website, description, images, opening_hours, category, subcategory, address, is_featured, updated_at) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        id || null, name, username, city, zip_code || null, location || null,
-        phone || null, email || null, website || null, description || null, JSON.stringify(images),
-        parsedOpeningHours, category, subcategory, address || null, 0,
+        id || `provider${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
+        name, username, city, zip_code || null, location || null,
+        phone || null, email || null, website || null, description || null, 
+        JSON.stringify(images), parsedOpeningHours, category, subcategory, 
+        address || null, 0,
       ]
     );
     res.status(201).json({ message: 'Provider created successfully' });
@@ -688,20 +705,30 @@ app.put('/api/user', verifyToken, upload.single('avatar'), [
   }
   const { name, email, phone } = req.body;
   const userId = req.user.id;
-  const oldAvatar = currentUser[0]?.avatar || null;
-  let newAvatar = oldAvatar;
-  if (req.file) {
-    newAvatar = `/uploads/${req.file.filename}`;
-    if (oldAvatar && oldAvatar !== newAvatar) {
-      try {
-        await fs.unlink(`.${oldAvatar}`);
-        console.log(`Deleted old avatar: ${oldAvatar}`);
-      } catch (err) {
-        console.error('Error deleting old avatar:', err);
+
+  try {
+    // Fetch current user
+    const [currentUser] = await pool.query('SELECT avatar FROM users WHERE id = ?', [userId]);
+    if (currentUser.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const oldAvatar = currentUser[0]?.avatar || null;
+    let newAvatar = oldAvatar;
+
+    // Handle new avatar
+    if (req.file) {
+      newAvatar = `/uploads/${req.file.filename}`;
+      if (oldAvatar && oldAvatar !== newAvatar) {
+        try {
+          await fs.unlink(path.join(__dirname, oldAvatar));
+          console.log(`Deleted old avatar: ${oldAvatar}`);
+        } catch (err) {
+          console.error('Error deleting old avatar:', err);
+        }
       }
     }
-  }
-  try {
+
+    // Update user
     const [result] = await pool.query(
       `UPDATE users SET name = ?, email = ?, phone = ?, avatar = ? WHERE id = ?`,
       [name, email, phone || null, newAvatar, userId]
@@ -709,9 +736,20 @@ app.put('/api/user', verifyToken, upload.single('avatar'), [
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    // Fetch updated user
     const [updatedUser] = await pool.query('SELECT id, name, email, role, avatar, phone, created_at FROM users WHERE id = ?', [userId]);
-    console.log('Updated user:', updatedUser[0]);
-    res.status(200).json({ user: updatedUser[0] });
+    res.status(200).json({
+      user: {
+        id: updatedUser[0].id,
+        name: updatedUser[0].name,
+        email: updatedUser[0].email,
+        role: updatedUser[0].role,
+        avatar: updatedUser[0].avatar || undefined,
+        phone: updatedUser[0].phone || undefined,
+        createdAt: updatedUser[0].created_at.toISOString(),
+      },
+    });
   } catch (error) {
     console.error('Error updating user:', error);
     res.status(500).json({ error: 'Internal server error' });
