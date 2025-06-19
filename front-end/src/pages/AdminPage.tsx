@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -221,8 +220,13 @@ const AdminPage: React.FC = () => {
     e.preventDefault();
     try {
       const formData = new FormData();
-      imageFiles.forEach((file) => formData.append('images', file));
-      formData.append('existingImages', JSON.stringify(existingImages));
+      // Only append images if files are selected
+      if (imageFiles.length > 0) {
+        imageFiles.forEach((file) => formData.append('images', file));
+      }
+      // Ensure existingImages is a valid array
+      const validExistingImages = Array.isArray(existingImages) ? existingImages : [];
+      formData.append('existingImages', JSON.stringify(validExistingImages));
       formData.append('username', providerForm.username || '');
       formData.append('name', providerForm.name || '');
       formData.append('city', providerForm.city || '');
@@ -233,12 +237,29 @@ const AdminPage: React.FC = () => {
       formData.append('description', providerForm.description || '');
       formData.append('category', providerForm.category || '');
       formData.append('subcategory', providerForm.subcategory || '');
-      formData.append('opening_hours', JSON.stringify(openingHours));
+      // Validate openingHours
+      const validOpeningHours = typeof openingHours === 'object' && !Array.isArray(openingHours) ? openingHours : {
+        monday: { open: 'Closed', close: 'Closed' },
+        tuesday: { open: 'Closed', close: 'Closed' },
+        wednesday: { open: 'Closed', close: 'Closed' },
+        thursday: { open: 'Closed', close: 'Closed' },
+        friday: { open: 'Closed', close: 'Closed' },
+        saturday: { open: 'Closed', close: 'Closed' },
+        sunday: { open: 'Closed', close: 'Closed' },
+      };
+      formData.append('openingHours', JSON.stringify(validOpeningHours));
       formData.append('location', providerForm.location || '');
       formData.append('address', providerForm.address || '');
       if (!providerId) {
         formData.append('id', generateProviderId());
       }
+
+      // Log FormData contents for debugging
+      const formDataEntries = Object.fromEntries(formData.entries());
+      console.log('FormData payload:', {
+        ...formDataEntries,
+        images: imageFiles.length > 0 ? `${imageFiles.length} files` : 'none',
+      });
 
       if (providerId) {
         await updateProvider(providerId, formData);
