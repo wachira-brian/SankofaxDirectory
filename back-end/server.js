@@ -253,8 +253,6 @@ app.post('/api/signup', [
   }
 });
 
-
-
 app.get('/api/admin/users/count', verifyAdmin, async (req, res) => {
   try {
     const [result] = await pool.query('SELECT COUNT(*) as count FROM users');
@@ -336,23 +334,46 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
   body('subcategory').notEmpty().isString(),
   body('location').optional().isString(),
   body('address').optional().isString(),
+  body('zip_code').optional().isString(),
+  body('openingHours').optional().isString(),
+  body('existingImages').optional().isString(),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-  const { id, name, username, city, zipCode, phone, email, website, description, category, subcategory, openingHours, location, address } = req.body;
+  const { id, name, username, city, zip_code, phone, email, website, description, category, subcategory, openingHours, location, address, existingImages } = req.body;
   const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
-  let parsedOpeningHours = '{}';
-  try {
-    if (openingHours) {
-      const cleanedOpeningHours = JSON.parse(openingHours.replace(/\\"/g, '"'));
-      parsedOpeningHours = JSON.stringify(cleanedOpeningHours);
+  // Validate existingImages
+  let updatedImages = [];
+  if (existingImages) {
+    try {
+      updatedImages = JSON.parse(existingImages);
+      if (!Array.isArray(updatedImages)) {
+        throw new Error('existingImages must be an array');
+      }
+    } catch (e) {
+      console.error('Error parsing existingImages:', { error: e.message, existingImages });
+      return res.status(400).json({ error: 'Invalid existingImages format' });
     }
-  } catch (e) {
-    console.error('Invalid openingHours format:', e);
-    return res.status(400).json({ error: 'Invalid openingHours format' });
+  }
+  if (images.length > 0) {
+    updatedImages = [...updatedImages, ...images];
+  }
+
+  // Validate openingHours
+  let parsedOpeningHours = {};
+  if (openingHours) {
+    try {
+      parsedOpeningHours = JSON.parse(openingHours);
+      if (typeof parsedOpeningHours !== 'object' || Array.isArray(parsedOpeningHours)) {
+        throw new Error('openingHours must be an object');
+      }
+    } catch (e) {
+      console.error('Error parsing openingHours:', { error: e.message, openingHours });
+      return res.status(400).json({ error: 'Invalid openingHours format' });
+    }
   }
 
   try {
@@ -360,15 +381,21 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
       `INSERT INTO providers (id, name, username, city, zip_code, location, phone, email, website, description, images, opening_hours, category, subcategory, address, is_featured, updated_at) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        id || null, name, username, city, zipCode || null, location || null,
-        phone || null, email || null, website || null, description || null, JSON.stringify(images),
-        parsedOpeningHours, category, subcategory, address || null, 0,
+        id || null, name, username, city, zip_code || null, location || null,
+        phone || null, email || null, website || null, description || null,
+        JSON.stringify(updatedImages), JSON.stringify(parsedOpeningHours),
+        category, subcategory, address || null, 0,
       ]
     );
     res.status(201).json({ message: 'Provider created successfully' });
   } catch (error) {
-    console.error('Error creating provider:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error creating provider:', {
+      message: error.message,
+      stack: error.stack,
+      body: req.body,
+      files: req.files,
+    });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
@@ -380,26 +407,72 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
   body('subcategory').notEmpty().isString(),
   body('location').optional().isString(),
   body('address').optional().isString(),
+  body('zip_code').optional().isString(),
+  body('openingHours').optional().isString(),
+  body('existingImages').optional().isString(),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
   const { id } = req.params;
-  const { name, username, city, zipCode, phone, email, website, description, category, subcategory, openingHours, location, address } = req.body;
+  const { name, username, city, zip_code, phone, email, website, description, category, subcategory, openingHours, location, address, existingImages } = req.body;
   const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
+
   try {
     const [existingProvider] = await pool.query('SELECT images, opening_hours FROM providers WHERE id = ?', [id]);
-    const currentImages = JSON.parse(existingProvider[0]?.images || '[]');
-    const updatedImages = images.length > 0 ? [...currentImages, ...images] : currentImages;
+    if (!existingProvider[0]) {
+      return res.status(404).json({ error: 'Provider not found' });
+    }
 
-    let updatedOpeningHours = JSON.parse(existingProvider[0]?.opening_hours || '{}');
+    // Parse existing images from database
+    let currentImages = [];
+    try {
+      currentImages = JSON.parse(existingProvider[0].images || '[]');
+      if (!Array.isArray(currentImages)) {
+        throw new Error('Database images must be an array');
+      }
+    } catch (e) {
+      console.error('Error parsing database images:', { error: e.message, images: existingProvider[0].images });
+      return res.status(500).json({ error: 'Invalid images format in database' });
+    }
+
+    // Parse existingImages from request
+    let updatedImages = currentImages;
+    if (existingImages) {
+      try {
+        updatedImages = JSON.parse(existingImages);
+        if (!Array.isArray(updatedImages)) {
+          throw new Error('existingImages must be an array');
+        }
+      } catch (e) {
+        console.error('Error parsing existingImages:', { error: e.message, existingImages });
+        return res.status(400).json({ error: 'Invalid existingImages format' });
+      }
+    }
+    if (images.length > 0) {
+      updatedImages = [...updatedImages, ...images];
+    }
+
+    // Parse opening hours
+    let updatedOpeningHours = {};
+    try {
+      updatedOpeningHours = JSON.parse(existingProvider[0].opening_hours || '{}');
+      if (typeof updatedOpeningHours !== 'object' || Array.isArray(updatedOpeningHours)) {
+        throw new Error('Database opening_hours must be an object');
+      }
+    } catch (e) {
+      console.error('Error parsing database opening_hours:', { error: e.message, opening_hours: existingProvider[0].opening_hours });
+      return res.status(500).json({ error: 'Invalid opening_hours format in database' });
+    }
     if (openingHours) {
       try {
-        const cleanedOpeningHours = JSON.parse(openingHours.replace(/\\"/g, '"'));
-        updatedOpeningHours = cleanedOpeningHours;
+        updatedOpeningHours = JSON.parse(openingHours);
+        if (typeof updatedOpeningHours !== 'object' || Array.isArray(updatedOpeningHours)) {
+          throw new Error('openingHours must be an object');
+        }
       } catch (e) {
-        console.error('Invalid openingHours format:', e);
+        console.error('Error parsing request openingHours:', { error: e.message, openingHours });
         return res.status(400).json({ error: 'Invalid openingHours format' });
       }
     }
@@ -408,7 +481,7 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
       `UPDATE providers SET name = ?, username = ?, city = ?, zip_code = ?, phone = ?, email = ?, 
        website = ?, description = ?, images = ?, opening_hours = ?, category = ?, subcategory = ?, address = ?, location = ? WHERE id = ?`,
       [
-        name, username, city, zipCode || null, phone || null, email || null,
+        name, username, city, zip_code || null, phone || null, email || null,
         website || null, description || null, JSON.stringify(updatedImages),
         JSON.stringify(updatedOpeningHours), category, subcategory, address || null, location || null, id,
       ]
@@ -418,8 +491,13 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
     }
     res.status(200).json({ message: 'Provider updated successfully' });
   } catch (error) {
-    console.error('Error updating provider:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error updating provider:', {
+      message: error.message,
+      stack: error.stack,
+      body: req.body,
+      files: req.files,
+    });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
