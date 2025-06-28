@@ -189,7 +189,7 @@ app.post('/api/login', [
 });
 
 app.post('/api/signup', [
-  body('name').notEmpty().isString().trim(),
+  body('name').notEmpty().isString(),
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 8 }),
   body('phone').optional().isString(),
@@ -414,23 +414,29 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
   const { id } = req.params;
   const { name, username, city, zip_code, phone, email, website, description, category, subcategory, openingHours, location, address, existingImages } = req.body;
   const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
-  console.log('Received existingImages for PUT:', existingImages);
+  // Log the full request payload for debugging
+  console.log('PUT /api/admin/providers/:id request:', {
+    id,
+    body: req.body,
+    files: req.files ? req.files.map(f => f.filename) : [],
+  });
 
   try {
     const [existingProvider] = await pool.query('SELECT images, opening_hours FROM providers WHERE id = ?', [id]);
     if (!existingProvider[0]) {
+      console.log(`Provider not found: ${id}`);
       return res.status(404).json({ error: 'Provider not found' });
     }
 
     let currentImages = [];
     try {
-      // Log raw images field for debugging
       console.log(`Raw images field for provider ${id}:`, existingProvider[0].images);
       currentImages = JSON.parse(existingProvider[0].images || '[]');
       if (!Array.isArray(currentImages)) {
@@ -443,13 +449,13 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
         providerId: id,
         rawImages: existingProvider[0].images,
       });
-      // Instead of failing, continue with empty array
       currentImages = [];
     }
 
     let updatedImages = currentImages;
     if (existingImages) {
       try {
+        console.log('Received existingImages:', existingImages);
         updatedImages = JSON.parse(existingImages);
         if (!Array.isArray(updatedImages)) {
           throw new Error('existingImages must be an array');
@@ -465,7 +471,6 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
 
     let updatedOpeningHours = {};
     try {
-      // Log raw opening_hours field for debugging
       console.log(`Raw opening_hours field for provider ${id}:`, existingProvider[0].opening_hours);
       updatedOpeningHours = JSON.parse(existingProvider[0].opening_hours || '{}');
       if (typeof updatedOpeningHours !== 'object' || Array.isArray(updatedOpeningHours)) {
@@ -492,27 +497,48 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
       }
     }
 
-    const [result] = await pool.query(
-      `UPDATE providers SET name = ?, username = ?, city = ?, zip_code = ?, phone = ?, email = ?, 
-       website = ?, description = ?, images = ?, opening_hours = ?, category = ?, subcategory = ?, address = ?, location = ?, updated_at = NOW() WHERE id = ?`,
-      [
-        name, username, city, zip_code || null, phone || null, email || null,
-        website || null, description || null, JSON.stringify(updatedImages),
-        JSON.stringify(updatedOpeningHours), category, subcategory, address || null, location || null, id,
-      ]
-    );
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Provider not found' });
+    // Log the data to be updated
+    console.log('Updating provider with data:', {
+      name, username, city, zip_code, phone, email, website, description,
+      images: JSON.stringify(updatedImages),
+      opening_hours: JSON.stringify(updatedOpeningHours),
+      category, subcategory, address, location, id,
+    });
+
+    try {
+      const [result] = await pool.query(
+        `UPDATE providers SET name = ?, username = ?, city = ?, zip_code = ?, phone = ?, email = ?, 
+         website = ?, description = ?, images = ?, opening_hours = ?, category = ?, subcategory = ?, address = ?, location = ?, updated_at = NOW() WHERE id = ?`,
+        [
+          name, username, city, zip_code || null, phone || null, email || null,
+          website || null, description || null, JSON.stringify(updatedImages),
+          JSON.stringify(updatedOpeningHours), category, subcategory, address || null, location || null, id,
+        ]
+      );
+      if (result.affectedRows === 0) {
+        console.log(`No rows affected for provider ${id}`);
+        return res.status(404).json({ error: 'Provider not found' });
+      }
+      console.log(`Provider ${id} updated successfully, affected rows: ${result.affectedRows}`);
+      res.status(200).json({ message: 'Provider updated successfully' });
+    } catch (error) {
+      console.error('Database update error:', {
+        error: error.message,
+        stack: error.stack,
+        sqlMessage: error.sqlMessage,
+        sqlState: error.sqlState,
+        code: error.code,
+      });
+      throw error;
     }
-    res.status(200).json({ message: 'Provider updated successfully' });
   } catch (error) {
     console.error('Error updating provider:', {
       message: error.message,
       stack: error.stack,
       body: req.body,
-      files: req.files,
+      files: req.files ? req.files.map(f => f.filename) : [],
     });
-    res.status(500).json({ error: 'Internal server error', details: error.message });
+    res.status(500).json({ error: 'Internal server error', details: error.message, sqlMessage: error.sqlMessage });
   }
 });
 
