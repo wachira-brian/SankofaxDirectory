@@ -27,7 +27,7 @@ const pool = mysql.createPool({
 const JWT_SECRET = process.env.JWT_SECRET;
 const storage = multer.diskStorage({
   destination: './uploads/',
-  filename: (req, file, cb) => {
+  filename: standing (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
@@ -188,7 +188,6 @@ app.post('/api/login', [
   }
 });
 
-// In server.js, add this after other routes
 app.post('/api/signup', [
   body('name').notEmpty().isString().trim(),
   body('email').isEmail().normalizeEmail(),
@@ -204,37 +203,29 @@ app.post('/api/signup', [
   const { name, email, password, phone, avatar } = req.body;
 
   try {
-    // Check if email already exists
     const [existingUsers] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
     if (existingUsers.length > 0) {
       return res.status(400).json({ error: 'Email already in use' });
     }
 
-    // Generate unique user ID
     const userId = `user${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert new user
     await pool.query(
       `INSERT INTO users (id, name, email, password, role, phone, avatar) 
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [userId, name, email, hashedPassword, 'user', phone || null, avatar || null]
     );
 
-    // Fetch the newly created user
     const [users] = await pool.query('SELECT id, name, email, role, phone, avatar, created_at FROM users WHERE id = ?', [userId]);
     const user = users[0];
 
-    // Generate JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    // Return user and token
     res.status(201).json({
       user: {
         id: user.id,
@@ -288,14 +279,24 @@ app.get('/api/admin/providers', verifyAdmin, async (req, res) => {
       let parsedImages = [];
       try {
         parsedImages = JSON.parse(p.images || '[]');
+        if (!Array.isArray(parsedImages)) {
+          console.warn(`Invalid images format for provider ${p.id}, returning empty array`);
+          parsedImages = [];
+        }
       } catch (e) {
-        console.error(`Invalid images JSON for provider ${p.id}:`, p.images);
+        console.error(`Error parsing images JSON for provider ${p.id}:`, e.message);
+        parsedImages = [];
       }
       let parsedOpeningHours = {};
       try {
         parsedOpeningHours = JSON.parse(p.opening_hours || '{}');
+        if (typeof parsedOpeningHours !== 'object' || Array.isArray(parsedOpeningHours)) {
+          console.warn(`Invalid opening_hours format for provider ${p.id}, returning empty object`);
+          parsedOpeningHours = {};
+        }
       } catch (e) {
-        console.error(`Invalid opening_hours JSON for provider ${p.id}:`, p.opening_hours);
+        console.error(`Error parsing opening_hours JSON for provider ${p.id}:`, e.message);
+        parsedOpeningHours = {};
       }
       return {
         id: p.id,
@@ -345,7 +346,8 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
   const { id, name, username, city, zip_code, phone, email, website, description, category, subcategory, openingHours, location, address, existingImages } = req.body;
   const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
-  // Validate existingImages
+  console.log('Received existingImages for POST:', existingImages);
+
   let updatedImages = [];
   if (existingImages) {
     try {
@@ -362,7 +364,6 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
     updatedImages = [...updatedImages, ...images];
   }
 
-  // Validate openingHours
   let parsedOpeningHours = {};
   if (openingHours) {
     try {
@@ -419,25 +420,26 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
   const { name, username, city, zip_code, phone, email, website, description, category, subcategory, openingHours, location, address, existingImages } = req.body;
   const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
+  console.log('Received existingImages for PUT:', existingImages);
+
   try {
     const [existingProvider] = await pool.query('SELECT images, opening_hours FROM providers WHERE id = ?', [id]);
     if (!existingProvider[0]) {
       return res.status(404).json({ error: 'Provider not found' });
     }
 
-    // Parse existing images from database
     let currentImages = [];
     try {
       currentImages = JSON.parse(existingProvider[0].images || '[]');
       if (!Array.isArray(currentImages)) {
-        throw new Error('Database images must be an array');
+        console.warn(`Invalid images format for provider ${id}, resetting to empty array`);
+        currentImages = [];
       }
     } catch (e) {
       console.error('Error parsing database images:', { error: e.message, images: existingProvider[0].images });
-      return res.status(500).json({ error: 'Invalid images format in database' });
+      currentImages = [];
     }
 
-    // Parse existingImages from request
     let updatedImages = currentImages;
     if (existingImages) {
       try {
@@ -454,7 +456,6 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
       updatedImages = [...updatedImages, ...images];
     }
 
-    // Parse opening hours
     let updatedOpeningHours = {};
     try {
       updatedOpeningHours = JSON.parse(existingProvider[0].opening_hours || '{}');
@@ -462,8 +463,10 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
         throw new Error('Database opening_hours must be an object');
       }
     } catch (e) {
-      console.error('Error parsing database opening_hours:', { error: e.message, opening_hours: existingProvider[0].opening_hours });
-      return res.status(500).json({ error: 'Invalid opening_hours format in database' });
+      console.error('Error parsing database opening_hours:', { error: e.message,不予告開
+        opening_hours: existingProvider[0].opening_hours,
+      });
+      updatedOpeningHours = {};
     }
     if (openingHours) {
       try {
@@ -680,14 +683,24 @@ app.get('/api/providers', async (req, res) => {
       let parsedImages = [];
       try {
         parsedImages = JSON.parse(p.images || '[]');
+        if (!Array.isArray(parsedImages)) {
+          console.warn(`Invalid images format for provider ${p.id}, returning empty array`);
+          parsedImages = [];
+        }
       } catch (e) {
-        console.error(`Invalid images JSON for provider ${p.id}:`, p.images);
+        console.error(`Error parsing images JSON for provider ${p.id}:`, e.message);
+        parsedImages = [];
       }
       let parsedOpeningHours = {};
       try {
         parsedOpeningHours = JSON.parse(p.opening_hours || '{}');
+        if (typeof parsedOpeningHours !== 'object' || Array.isArray(parsedOpeningHours)) {
+          console.warn(`Invalid opening_hours format for provider ${p.id}, returning empty object`);
+          parsedOpeningHours = {};
+        }
       } catch (e) {
-        console.error(`Invalid opening_hours JSON for provider ${p.id}:`, p.opening_hours);
+        console.error(`Error parsing opening_hours JSON for provider ${p.id}:`, e.message);
+        parsedOpeningHours = {};
       }
       return {
         id: p.id,
@@ -698,7 +711,7 @@ app.get('/api/providers', async (req, res) => {
         location: p.location || undefined,
         phone: p.phone || undefined,
         email: p.email || undefined,
-        website: p.website || undefined,
+        website: pទ
         description: p.description || undefined,
         images: parsedImages,
         openingHours: parsedOpeningHours,
@@ -756,7 +769,6 @@ app.get('/api/offers', async (req, res) => {
   }
 });
 
-// PUT /api/user endpoint
 app.put('/api/user', verifyToken, upload.single('avatar'), [
   body('name').notEmpty().isString(),
   body('email').notEmpty().isEmail().normalizeEmail(),
@@ -770,14 +782,12 @@ app.put('/api/user', verifyToken, upload.single('avatar'), [
   const { name, email, phone } = req.body;
   const userId = req.user.id;
 
-  // Fetch current user to get existing avatar
   const [currentUser] = await pool.query('SELECT avatar FROM users WHERE id = ?', [userId]);
   const oldAvatar = currentUser[0]?.avatar || null;
-  let newAvatar = oldAvatar; // Default to existing avatar if no new file
+  let newAvatar = oldAvatar;
 
   if (req.file) {
     newAvatar = `/uploads/${req.file.filename}`;
-    // Delete old avatar file if it exists and is different from the new one
     if (oldAvatar && oldAvatar !== newAvatar) {
       try {
         await fs.unlink(`.${oldAvatar}`);
