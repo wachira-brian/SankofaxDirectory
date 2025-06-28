@@ -21,8 +21,8 @@ interface AdminState {
   fetchOffers: () => Promise<void>;
   fetchUserCount: () => Promise<void>;
   fetchAdmins: () => Promise<void>;
-  createProvider: (provider: Partial<Provider>) => Promise<void>;
-  updateProvider: (id: string, provider: Partial<Provider>) => Promise<void>;
+  createProvider: (provider: FormData) => Promise<void>;
+  updateProvider: (id: string, provider: FormData) => Promise<void>;
   deleteProvider: (id: string) => Promise<void>;
   createOffer: (offer: Partial<Offer>) => Promise<void>;
   updateOffer: (id: string, offer: Partial<Offer>) => Promise<void>;
@@ -49,6 +49,7 @@ export const useAdminStore = create<AdminState>((set) => ({
       });
     } catch (error) {
       console.error('Error fetching providers:', error);
+      throw error;
     }
   },
   fetchOffers: async () => {
@@ -59,6 +60,7 @@ export const useAdminStore = create<AdminState>((set) => ({
       set({ offers: response.data.offers });
     } catch (error) {
       console.error('Error fetching offers:', error);
+      throw error;
     }
   },
   fetchUserCount: async () => {
@@ -69,6 +71,7 @@ export const useAdminStore = create<AdminState>((set) => ({
       set({ userCount: response.data.count });
     } catch (error) {
       console.error('Error fetching user count:', error);
+      throw error;
     }
   },
   fetchAdmins: async () => {
@@ -79,6 +82,7 @@ export const useAdminStore = create<AdminState>((set) => ({
       set({ admins: response.data.admins });
     } catch (error) {
       console.error('Error fetching admins:', error);
+      throw error;
     }
   },
   createProvider: async (provider) => {
@@ -86,11 +90,11 @@ export const useAdminStore = create<AdminState>((set) => ({
       const response = await axios.post(`${API_BASE_URL}/admin/providers`, provider, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
         },
       });
       if (response.status !== 201) throw new Error('Failed to create provider');
     } catch (error) {
+      console.error('Error creating provider:', error);
       throw new Error(`Create provider failed: ${(error as Error).message}`);
     }
   },
@@ -99,11 +103,11 @@ export const useAdminStore = create<AdminState>((set) => ({
       const response = await axios.put(`${API_BASE_URL}/admin/providers/${id}`, provider, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
         },
       });
       if (response.status !== 200) throw new Error('Failed to update provider');
     } catch (error) {
+      console.error('Error updating provider:', error);
       throw new Error(`Update provider failed: ${(error as Error).message}`);
     }
   },
@@ -112,11 +116,11 @@ export const useAdminStore = create<AdminState>((set) => ({
       const response = await axios.delete(`${API_BASE_URL}/admin/providers/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
         },
       });
       if (response.status !== 200) throw new Error('Failed to delete provider');
     } catch (error) {
+      console.error('Error deleting provider:', error);
       throw new Error(`Delete provider failed: ${(error as Error).message}`);
     }
   },
@@ -130,6 +134,7 @@ export const useAdminStore = create<AdminState>((set) => ({
       });
       if (response.status !== 201) throw new Error('Failed to create offer');
     } catch (error) {
+      console.error('Error creating offer:', error);
       throw new Error(`Create offer failed: ${(error as Error).message}`);
     }
   },
@@ -143,6 +148,7 @@ export const useAdminStore = create<AdminState>((set) => ({
       });
       if (response.status !== 200) throw new Error('Failed to update offer');
     } catch (error) {
+      console.error('Error updating offer:', error);
       throw new Error(`Update offer failed: ${(error as Error).message}`);
     }
   },
@@ -151,11 +157,11 @@ export const useAdminStore = create<AdminState>((set) => ({
       const response = await axios.delete(`${API_BASE_URL}/admin/offers/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
         },
       });
       if (response.status !== 200) throw new Error('Failed to delete offer');
     } catch (error) {
+      console.error('Error deleting offer:', error);
       throw new Error(`Delete offer failed: ${(error as Error).message}`);
     }
   },
@@ -173,6 +179,7 @@ export const useAdminStore = create<AdminState>((set) => ({
       );
       if (response.status !== 200) throw new Error('Failed to update featured status');
     } catch (error) {
+      console.error('Error updating featured status:', error);
       throw new Error(`Update featured status failed: ${(error as Error).message}`);
     }
   },
