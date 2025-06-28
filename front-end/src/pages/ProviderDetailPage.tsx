@@ -9,6 +9,9 @@ import OfferCard from '../components/offers/OfferCard';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 
+// Fallback image URL
+const FALLBACK_IMAGE = '/images/fallback-provider-image.jpg';
+
 const ProviderDetailPage: React.FC = () => {
   const { providerId } = useParams<{ providerId: string }>();
   const { getProviderById, getOffersByProviderId, fetchProviders, fetchOffers } = useProviderStore();
@@ -36,22 +39,25 @@ const ProviderDetailPage: React.FC = () => {
     );
   }
   
+  // Use fallback image if no images are available
+  const images = provider.images && provider.images.length > 0 ? provider.images : [FALLBACK_IMAGE];
+
   const nextImage = () => {
     setCurrentImageIndex((prevIndex) => 
-      prevIndex === provider.images.length - 1 ? 0 : prevIndex + 1
+      prevIndex === images.length - 1 ? 0 : prevIndex + 1
     );
   };
   
   const prevImage = () => {
     setCurrentImageIndex((prevIndex) => 
-      prevIndex === 0 ? provider.images.length - 1 : prevIndex - 1
+      prevIndex === 0 ? images.length - 1 : prevIndex - 1
     );
   };
   
   // Format days and opening hours
-  const formattedOpeningHours = Object.entries(provider.openingHours).map(([day, hours]) => ({
+  const formattedOpeningHours = Object.entries(provider.openingHours || {}).map(([day, hours]) => ({
     day: day.charAt(0).toUpperCase() + day.slice(1),
-    hours: `${hours.open} - ${hours.close}`
+    hours: `${hours.open || 'N/A'} - ${hours.close || 'N/A'}`
   }));
 
   // Parse location string (e.g., "latitude,longitude" or address)
@@ -131,12 +137,15 @@ const ProviderDetailPage: React.FC = () => {
           {/* Image Gallery */}
           <div className="relative h-96">
             <img 
-              src={provider.images[currentImageIndex]} 
+              src={images[currentImageIndex]} 
               alt={provider.name} 
               className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = FALLBACK_IMAGE; // Fallback on error
+              }}
             />
             
-            {provider.images.length > 1 && (
+            {images.length > 1 && (
               <>
                 <button 
                   onClick={prevImage}
@@ -152,7 +161,7 @@ const ProviderDetailPage: React.FC = () => {
                 </button>
                 
                 <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
-                  {provider.images.map((_, index) => (
+                  {images.map((_, index) => (
                     <button 
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}
@@ -175,13 +184,13 @@ const ProviderDetailPage: React.FC = () => {
                 <div className="flex items-center mb-4">
                   <div className="flex items-center">
                     <Star className="h-5 w-5 text-yellow-400" fill="currentColor" />
-                    <span className="ml-1 font-medium">{provider.rating}</span>
+                    <span className="ml-1 font-medium">{provider.rating || 'N/A'}</span>
                   </div>
                   <span className="mx-2 text-gray-400">•</span>
-                  <span className="text-gray-600">{provider.reviewCount} reviews</span>
+                  <span className="text-gray-600">{provider.reviewCount || 0} reviews</span>
                 </div>
                 
-                <p className="text-gray-700 mb-6">{provider.description}</p>
+                <p className="text-gray-700 mb-6">{provider.description || 'No description available'}</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div className="flex items-start">
@@ -249,7 +258,7 @@ const ProviderDetailPage: React.FC = () => {
                       <div>
                         <h4 className="font-medium text-gray-900">Website</h4>
                         <a 
-                          href={`https://${provider.website}`} 
+                          href={provider.website.startsWith('http') ? provider.website : `https://${provider.website}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-primary-600 hover:text-primary-800"
@@ -270,12 +279,16 @@ const ProviderDetailPage: React.FC = () => {
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2">Opening Hours</h4>
                         <ul className="space-y-1">
-                          {formattedOpeningHours.map(({ day, hours }) => (
-                            <li key={day} className="flex justify-between text-sm">
-                              <span className="font-medium text-gray-700">{day}</span>
-                              <span className="text-gray-600">{hours}</span>
-                            </li>
-                          ))}
+                          {formattedOpeningHours.length > 0 ? (
+                            formattedOpeningHours.map(({ day, hours }) => (
+                              <li key={day} className="flex justify-between text-sm">
+                                <span className="font-medium text-gray-700">{day}</span>
+                                <span className="text-gray-600">{hours}</span>
+                              </li>
+                            ))
+                          ) : (
+                            <li className="text-sm text-gray-600">No opening hours available</li>
+                          )}
                         </ul>
                       </div>
                     </div>
