@@ -181,7 +181,7 @@ const AdminPage: React.FC = () => {
   }
 
   if (!isAuthorized) {
-    return null; // Redirect handled by useEffect
+    return null;
   }
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -220,12 +220,11 @@ const AdminPage: React.FC = () => {
     e.preventDefault();
     try {
       const formData = new FormData();
-      // Only append images if files are selected
       if (imageFiles.length > 0) {
         imageFiles.forEach((file) => formData.append('images', file));
       }
-      // Ensure existingImages is a valid array
       const validExistingImages = Array.isArray(existingImages) ? existingImages : [];
+      console.log('existingImages before stringify:', validExistingImages);
       formData.append('existingImages', JSON.stringify(validExistingImages));
       formData.append('username', providerForm.username || '');
       formData.append('name', providerForm.name || '');
@@ -237,7 +236,6 @@ const AdminPage: React.FC = () => {
       formData.append('description', providerForm.description || '');
       formData.append('category', providerForm.category || '');
       formData.append('subcategory', providerForm.subcategory || '');
-      // Validate openingHours
       const validOpeningHours = typeof openingHours === 'object' && !Array.isArray(openingHours) ? openingHours : {
         monday: { open: 'Closed', close: 'Closed' },
         tuesday: { open: 'Closed', close: 'Closed' },
@@ -254,7 +252,6 @@ const AdminPage: React.FC = () => {
         formData.append('id', generateProviderId());
       }
 
-      // Log FormData contents for debugging
       const formDataEntries = Object.fromEntries(formData.entries());
       console.log('FormData payload:', {
         ...formDataEntries,
@@ -294,7 +291,7 @@ const AdminPage: React.FC = () => {
       address: provider.address || '',
       zip_code: provider.zip_code || '',
     });
-    setOpeningHours(provider.opening_hours || {
+    setOpeningHours(provider.openingHours || {
       monday: { open: 'Closed', close: 'Closed' },
       tuesday: { open: 'Closed', close: 'Closed' },
       wednesday: { open: 'Closed', close: 'Closed' },
@@ -303,7 +300,9 @@ const AdminPage: React.FC = () => {
       saturday: { open: 'Closed', close: 'Closed' },
       sunday: { open: 'Closed', close: 'Closed' },
     });
-    setExistingImages(provider.images || []);
+    const imagesArray = Array.isArray(provider.images) ? provider.images : [];
+    console.log('Setting existingImages:', imagesArray);
+    setExistingImages(imagesArray);
     setImageFiles([]);
     setShowProviderForm(true);
   };
@@ -729,7 +728,7 @@ const AdminPage: React.FC = () => {
                       <p className="text-gray-600">No providers found.</p>
                     ) : (
                       filteredProviders.map((provider) => (
-                        <div key={provider.id} className="border p-4 rounded-md flex flex-col sm:flex sm:items-start sm:gap-4">
+                        <div key={provider.id} className="border p-4 rounded-md flex flex-col sm:flex-row sm:items-start sm:gap-4">
                           <div className="sm:flex-1">
                             <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
                             <p className="text-sm text-gray-600">{provider.city}</p>
@@ -768,7 +767,7 @@ const AdminPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="mb-8">
+        <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-semibold text-gray-900">Manage Offers</h2>
@@ -785,11 +784,6 @@ const AdminPage: React.FC = () => {
           <CardContent>
             {showOfferForm && (
               <form onSubmit={handleOfferSubmit} className="space-y-4 mb-6 p-4 border rounded-md bg-gray-50">
-                <Input
-                  label="Offer ID (for update/delete)"
-                  value={offerId}
-                  onChange={(e) => setOfferId(e.target.value)}
-                />
                 <Input
                   label="Provider ID"
                   value={offerForm.providerId || ''}
@@ -856,6 +850,11 @@ const AdminPage: React.FC = () => {
                       ))}
                   </select>
                 </div>
+                <Input
+                  label="Description"
+                  value={offerForm.description || ''}
+                  onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })}
+                />
                 <div className="flex space-x-4">
                   <Button type="submit">{offerId ? 'Update' : 'Create'} Offer</Button>
                   <Button variant="outline" onClick={() => {
@@ -866,142 +865,39 @@ const AdminPage: React.FC = () => {
                 </div>
               </form>
             )}
-
-            <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
-              <form onSubmit={handleSearch} className="flex-1">
-                <Input
-                  name="search"
-                  type="text"
-                  placeholder="Search offers..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  icon={<Search className="h-5 w-5 text-gray-400" />}
-                />
-              </form>
-              <div className="flex items-center space-x-4">
-                {(searchTerm || selectedCategory) && (
-                  <button
-                    onClick={clearFilters}
-                    className="flex items-center text-sm text-gray-600 hover:text-gray-900"
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Clear filters
-                  </button>
+            <div className="max-h-[600px] overflow-y-auto">
+              <div className="grid grid-cols-1 gap-4">
+                {filteredOffers.length === 0 ? (
+                  <p className="text-gray-600">No offers found.</p>
+                ) : (
+                  filteredOffers.map((offer) => (
+                    <div key={offer.id} className="border p-4 rounded-md flex flex-col sm:flex-row sm:items-start sm:gap-4">
+                      <div className="sm:flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900">{offer.name}</h3>
+                        <p className="text-sm text-gray-600">Provider ID: {offer.providerId}</p>
+                        <p className="text-sm text-gray-600">{offer.category} - {offer.subcategory}</p>
+                        {offer.description && (
+                          <p className="text-sm text-gray-600 mt-1">{offer.description}</p>
+                        )}
+                        <p className="text-sm text-gray-600 mt-1">Price: ${offer.price}</p>
+                      </div>
+                      <div className="flex space-x-2 mt-2 sm:mt-0 sm:flex-none">
+                        <Button
+                          variant="outline"
+                          onClick={() => handleEditOffer(offer)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleDeleteOffer(offer.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))
                 )}
-                <Button
-                  onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
-                  variant="outline"
-                  className="md:hidden"
-                >
-                  <Filter className="h-5 w-5 mr-2" />
-                  Filters
-                </Button>
-              </div>
-            </div>
-
-            {isMobileFilterOpen && (
-              <div className="fixed inset-0 z-40 md:hidden">
-                <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsMobileFilterOpen(false)}></div>
-                <div className="absolute right-0 top-0 h-full w-3/4 max-w-xs bg-white shadow-xl flex flex-col">
-                  <div className="flex items-center justify-between p-4 border-b">
-                    <h4 className="font-medium text-gray-900">Filters</h4>
-                    <button onClick={() => setIsMobileFilterOpen(false)}>
-                      <X className="h-5 w-5 text-gray-500" />
-                    </button>
-                  </div>
-                  <div className="p-4 overflow-y-auto">
-                    <h4 className="font-medium text-gray-900 mb-3">Categories</h4>
-                    <div className="space-y-2">
-                      {categories.map((category) => (
-                        <button
-                          key={category}
-                          onClick={() => {
-                            handleCategoryClick(category);
-                            setIsMobileFilterOpen(false);
-                          }}
-                          className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
-                            selectedCategory === category
-                              ? 'bg-primary-100 text-primary-800 font-medium'
-                              : 'text-gray-700 hover:bg-gray-100'
-                          }`}
-                        >
-                          {category}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col md:flex-row">
-              <div className="hidden md:block w-64 mr-8">
-                <Card>
-                  <CardHeader>
-                    <h3 className="font-medium text-gray-900">Categories</h3>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {categories.map((category) => (
-                        <button
-                          key={category}
-                          onClick={() => handleCategoryClick(category)}
-                          className={`block w-full text-left px-4 py-2 text-sm rounded-md ${
-                            selectedCategory === category
-                              ? 'bg-primary-100 text-primary-800 font-medium'
-                              : 'text-gray-700 hover:bg-gray-100'
-                          }`}
-                        >
-                          {category}
-                        </button>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              <div className="flex-1">
-                <div className="max-h-[600px] overflow-y-auto">
-                  <div className="grid grid-cols-1 gap-4">
-                    {filteredOffers.length === 0 ? (
-                      <p className="text-gray-600">No offers found.</p>
-                    ) : (
-                      filteredOffers.map((offer) => (
-                        <div key={offer.id} className="border p-4 rounded-md flex flex-col sm:flex sm:items-start sm:gap-4">
-                          <div className="sm:flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900">{offer.name}</h3>
-                            <p className="text-sm text-gray-600">{offer.category} - {offer.subcategory}</p>
-                            {offer.description && (
-                              <p className="text-sm text-gray-600 mt-1">{offer.description}</p>
-                            )}
-                          </div>
-                          <div className="flex space-x-2 mt-2 sm:mt-0 sm:flex-none">
-                            <Button
-                              variant="outline"
-                              onClick={() => handleEditOffer(offer)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() => handleDeleteOffer(offer.id)}
-                            >
-                              Delete
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setOfferId('');
-                                setOfferForm({});
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
           </CardContent>
