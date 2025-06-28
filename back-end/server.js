@@ -27,7 +27,7 @@ const pool = mysql.createPool({
 const JWT_SECRET = process.env.JWT_SECRET;
 const storage = multer.diskStorage({
   destination: './uploads/',
-  filename: standing (req, file, cb) => {
+  filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
@@ -430,13 +430,20 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
 
     let currentImages = [];
     try {
+      // Log raw images field for debugging
+      console.log(`Raw images field for provider ${id}:`, existingProvider[0].images);
       currentImages = JSON.parse(existingProvider[0].images || '[]');
       if (!Array.isArray(currentImages)) {
         console.warn(`Invalid images format for provider ${id}, resetting to empty array`);
         currentImages = [];
       }
     } catch (e) {
-      console.error('Error parsing database images:', { error: e.message, images: existingProvider[0].images });
+      console.error('Error parsing database images:', {
+        error: e.message,
+        providerId: id,
+        rawImages: existingProvider[0].images,
+      });
+      // Instead of failing, continue with empty array
       currentImages = [];
     }
 
@@ -458,13 +465,18 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
 
     let updatedOpeningHours = {};
     try {
+      // Log raw opening_hours field for debugging
+      console.log(`Raw opening_hours field for provider ${id}:`, existingProvider[0].opening_hours);
       updatedOpeningHours = JSON.parse(existingProvider[0].opening_hours || '{}');
       if (typeof updatedOpeningHours !== 'object' || Array.isArray(updatedOpeningHours)) {
-        throw new Error('Database opening_hours must be an object');
+        console.warn(`Invalid opening_hours format for provider ${id}, resetting to empty object`);
+        updatedOpeningHours = {};
       }
     } catch (e) {
-      console.error('Error parsing database opening_hours:', { error: e.message,不予告開
-        opening_hours: existingProvider[0].opening_hours,
+      console.error('Error parsing database opening_hours:', {
+        error: e.message,
+        providerId: id,
+        rawOpeningHours: existingProvider[0].opening_hours,
       });
       updatedOpeningHours = {};
     }
@@ -482,7 +494,7 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
 
     const [result] = await pool.query(
       `UPDATE providers SET name = ?, username = ?, city = ?, zip_code = ?, phone = ?, email = ?, 
-       website = ?, description = ?, images = ?, opening_hours = ?, category = ?, subcategory = ?, address = ?, location = ? WHERE id = ?`,
+       website = ?, description = ?, images = ?, opening_hours = ?, category = ?, subcategory = ?, address = ?, location = ?, updated_at = NOW() WHERE id = ?`,
       [
         name, username, city, zip_code || null, phone || null, email || null,
         website || null, description || null, JSON.stringify(updatedImages),
@@ -711,7 +723,7 @@ app.get('/api/providers', async (req, res) => {
         location: p.location || undefined,
         phone: p.phone || undefined,
         email: p.email || undefined,
-        website: pទ
+        website: p.website || undefined,
         description: p.description || undefined,
         images: parsedImages,
         openingHours: parsedOpeningHours,
