@@ -5,7 +5,7 @@ import { Provider } from '../../store/providerStore';
 import Card from '../ui/Card';
 
 // Fallback image URL (replace with your actual fallback image path)
-const FALLBACK_IMAGE = '/images/fallback-provider-image.jpg';
+const FALLBACK_IMAGE = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/153000/153803/ISS069-E-37411-37415_lrg.jpg';
 
 interface ProviderCardProps {
   provider: Provider;
