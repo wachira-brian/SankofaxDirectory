@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { 
-  MapPin, Phone, Mail, Globe, Clock, Star, ChevronLeft, ChevronRight, Users 
-} from 'lucide-react';
+import { MapPin, Phone, Mail, Globe, Clock, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProviderStore } from '../store/providerStore';
 import OfferCard from '../components/offers/OfferCard';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import { toast } from 'react-toastify';
 
 // Fallback image URL
-const FALLBACK_IMAGE = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/153000/153803/ISS069-E-37411-37415_lrg.jpg';
+const FALLBACK_IMAGE = '/assets/fallback-image.jpg';
 
 const ProviderDetailPage: React.FC = () => {
   const { providerId } = useParams<{ providerId: string }>();
@@ -39,8 +38,10 @@ const ProviderDetailPage: React.FC = () => {
     );
   }
   
-  // Use fallback image if no images are available
-  const images = provider.images && provider.images.length > 0 ? provider.images : [FALLBACK_IMAGE];
+  // Normalize images to ensure valid paths
+  const images = Array.isArray(provider.images) && provider.images.length > 0 
+    ? provider.images.map(img => img.startsWith('/Uploads') ? `${import.meta.env.VITE_API_URL}${img}` : `${import.meta.env.VITE_API_URL}/Uploads${img}`)
+    : [FALLBACK_IMAGE];
 
   const nextImage = () => {
     setCurrentImageIndex((prevIndex) => 
@@ -54,43 +55,49 @@ const ProviderDetailPage: React.FC = () => {
     );
   };
   
-  // Format days and opening hours
-  const formattedOpeningHours = Object.entries(provider.openingHours || {}).map(([day, hours]) => ({
-    day: day.charAt(0).toUpperCase() + day.slice(1),
-    hours: `${hours.open || 'N/A'} - ${hours.close || 'N/A'}`
-  }));
+  // Format opening hours with error handling
+  const formattedOpeningHours = (() => {
+    try {
+      const openingHours = provider.openingHours || {};
+      return Object.entries(openingHours).map(([day, hours]) => ({
+        day: day.charAt(0).toUpperCase() + day.slice(1),
+        hours: `${hours.open || 'Closed'} - ${hours.close || 'Closed'}`
+      }));
+    } catch (error) {
+      console.error('Error formatting opening hours:', error);
+      return [];
+    }
+  })();
 
-  // Parse location string (e.g., "latitude,longitude" or address)
+  // Parse location for map coordinates
   const parseLocation = (location: string | undefined): [number, number] | null => {
     if (!location) return null;
     const [lat, lng] = location.split(',').map(Number);
-    if (isNaN(lat) || isNaN(lng)) return null; // Fallback if not a valid lat,lng pair
+    if (isNaN(lat) || isNaN(lng)) return null;
     return [lat, lng];
   };
 
   const mapCoordinates = parseLocation(provider.location);
 
-  // Enhanced address formatting function
+  // Enhanced address formatting
   const getFormattedAddress = () => {
     if (provider.address) {
-      return provider.address; // Use address if available
+      return provider.address;
     } else if (provider.location) {
-      // Attempt to extract a readable address from location (e.g., Google Maps link)
       const urlMatch = provider.location.match(/@(-?\d+\.\d+),(-?\d+\.\d+),(\d+\.?\d*)z\/data=(.*)/);
       if (urlMatch && urlMatch[4]) {
-        return decodeURIComponent(urlMatch[4].replace(/\+/g, ' ')); // Extract address from URL
+        return decodeURIComponent(urlMatch[4].replace(/\+/g, ' '));
       }
-      return provider.location; // Fallback to raw location string
+      return provider.location;
     }
-    return 'Address not available'; // Default if both are absent
+    return 'Address not available';
   };
 
-  // State for geocoded coordinates
+  // Geocode address for map
   const [geocodedCoordinates, setGeocodedCoordinates] = useState<[number, number] | null>(null);
   const [loadingMap, setLoadingMap] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
-  // Geocode address to lat,lng
   useEffect(() => {
     const geocodeAddress = async () => {
       const address = getFormattedAddress();
@@ -106,6 +113,9 @@ const ProviderDetailPage: React.FC = () => {
         const response = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
         );
+        if (!response.ok) {
+          throw new Error('Failed to fetch geocoding data');
+        }
         const data = await response.json();
         if (data && data.length > 0) {
           const { lat, lon } = data[0];
@@ -115,8 +125,10 @@ const ProviderDetailPage: React.FC = () => {
           setMapError('Could not geocode address.');
         }
       } catch (error) {
+        console.error('Geocoding error:', error);
         setGeocodedCoordinates(null);
         setMapError('Error fetching map data.');
+        toast.error('Failed to load map location.');
       } finally {
         setLoadingMap(false);
       }
@@ -141,7 +153,7 @@ const ProviderDetailPage: React.FC = () => {
               alt={provider.name} 
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.currentTarget.src = FALLBACK_IMAGE; // Fallback on error
+                e.currentTarget.src = FALLBACK_IMAGE;
               }}
             />
             
@@ -198,7 +210,7 @@ const ProviderDetailPage: React.FC = () => {
                     <div>
                       <h4 className="font-medium text-gray-900">Address</h4>
                       <p className="text-gray-600">
-                        {provider.location ? (
+                        {provider.location && provider.location.includes('http') ? (
                           <a
                             href={provider.location}
                             target="_blank"
@@ -320,9 +332,9 @@ const ProviderDetailPage: React.FC = () => {
               <div className="h-full flex items-center justify-center text-gray-600">
                 Loading map...
               </div>
-            ) : geocodedCoordinates ? (
+            ) : geocodedCoordinates || mapCoordinates ? (
               <MapContainer 
-                center={geocodedCoordinates} 
+                center={geocodedCoordinates || mapCoordinates || [0, 0]} 
                 zoom={14} 
                 scrollWheelZoom={false}
                 style={{ height: '100%', width: '100%' }}
@@ -331,12 +343,12 @@ const ProviderDetailPage: React.FC = () => {
                   attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <Marker position={geocodedCoordinates}>
+                <Marker position={geocodedCoordinates || mapCoordinates || [0, 0]}>
                   <Popup>
                     <div className="p-2">
                       <h3 className="font-medium">{provider.name}</h3>
                       <p className="text-sm">
-                        {provider.location ? (
+                        {provider.location && provider.location.includes('http') ? (
                           <a
                             href={provider.location}
                             target="_blank"
@@ -353,13 +365,9 @@ const ProviderDetailPage: React.FC = () => {
                   </Popup>
                 </Marker>
               </MapContainer>
-            ) : mapError ? (
-              <div className="h-full flex items-center justify-center text-gray-600">
-                {mapError}
-              </div>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-600">
-                Location data not available for mapping.
+                {mapError || 'Location data not available for mapping.'}
               </div>
             )}
           </div>
