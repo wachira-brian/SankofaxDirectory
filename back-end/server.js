@@ -70,6 +70,36 @@ const verifyAdmin = async (req, res, next) => {
   }
 };
 
+// Middleware to verify user or admin access for provider management
+const verifyUserOrAdmin = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: No token provided' });
+  }
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    if (decoded.role === 'admin') {
+      return next(); // Admins can manage all providers
+    }
+    // For non-admin users, verify they own the provider
+    if (req.params.id) {
+      const [providers] = await pool.query('SELECT user_id FROM providers WHERE id = ?', [req.params.id]);
+      if (providers.length === 0) {
+        return res.status(404).json({ error: 'Provider not found' });
+      }
+      if (providers[0].user_id !== decoded.id) {
+        return res.status(403).json({ error: 'Forbidden: You can only manage your own providers' });
+      }
+    }
+    next();
+  } catch (error) {
+    console.error('JWT error:', error);
+    res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+};
+
 async function initializeDatabase() {
   const connection = await pool.getConnection();
   try {
@@ -100,6 +130,7 @@ async function initializeDatabase() {
     await connection.query(`
       CREATE TABLE IF NOT EXISTS providers (
         id VARCHAR(255) PRIMARY KEY,
+        user_id VARCHAR(255),
         name VARCHAR(255) NOT NULL,
         username VARCHAR(255) NOT NULL,
         city VARCHAR(100) NOT NULL,
@@ -116,7 +147,8 @@ async function initializeDatabase() {
         address VARCHAR(1000),
         is_featured TINYINT(1) DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       );
     `);
 
@@ -272,34 +304,46 @@ app.get('/api/admin/admins', verifyAdmin, async (req, res) => {
   }
 });
 
-app.get('/api/admin/providers', verifyAdmin, async (req, res) => {
+// New endpoint for featured providers (accessible to all)
+app.get('/api/featured-providers', async (req, res) => {
   try {
-    const [providers] = await pool.query('SELECT * FROM providers');
+    const [providers] = await pool.query('SELECT * FROM providers WHERE is_featured = 1');
     const formattedProviders = providers.map((p) => {
       let parsedImages = [];
       try {
-        parsedImages = JSON.parse(p.images || '[]');
+        const rawImages = p.images || '[]';
+        console.log(`Raw images field for provider ${p.id}:`, rawImages);
+        parsedImages = JSON.parse(rawImages);
         if (!Array.isArray(parsedImages)) {
-          console.warn(`Invalid images format for provider ${p.id}, returning empty array`);
+          console.warn(`Invalid images format for provider ${p.id}, resetting to empty array`);
           parsedImages = [];
         }
       } catch (e) {
-        console.error(`Error parsing images JSON for provider ${p.id}:`, e.message);
+        console.error(`Error parsing images JSON for provider ${p.id}:`, {
+          error: e.message,
+          rawImages: p.images,
+        });
         parsedImages = [];
       }
       let parsedOpeningHours = {};
       try {
-        parsedOpeningHours = JSON.parse(p.opening_hours || '{}');
+        const rawOpeningHours = p.opening_hours || '{}';
+        console.log(`Raw opening_hours field for provider ${p.id}:`, rawOpeningHours);
+        parsedOpeningHours = JSON.parse(rawOpeningHours);
         if (typeof parsedOpeningHours !== 'object' || Array.isArray(parsedOpeningHours)) {
-          console.warn(`Invalid opening_hours format for provider ${p.id}, returning empty object`);
+          console.warn(`Invalid opening_hours format for provider ${p.id}, resetting to empty object`);
           parsedOpeningHours = {};
         }
       } catch (e) {
-        console.error(`Error parsing opening_hours JSON for provider ${p.id}:`, e.message);
+        console.error(`Error parsing opening_hours JSON for provider ${p.id}:`, {
+          error: e.message,
+          rawOpeningHours: p.opening_hours,
+        });
         parsedOpeningHours = {};
       }
       return {
         id: p.id,
+        userId: p.user_id || undefined,
         name: p.name,
         username: p.username,
         city: p.city,
@@ -321,12 +365,238 @@ app.get('/api/admin/providers', verifyAdmin, async (req, res) => {
     });
     res.status(200).json({ providers: formattedProviders });
   } catch (error) {
-    console.error('Error fetching providers:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching featured providers:', {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
-app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
+// Updated endpoint for all providers (accessible to all)
+app.get('/api/providers', async (req, res) => {
+  const { category, subcategory, search } = req.query;
+  try {
+    let query = 'SELECT * FROM providers';
+    const params = [];
+    if (category) {
+      query += ' WHERE category = ?';
+      params.push(category);
+    }
+    if (subcategory) {
+      query += (category ? ' AND' : ' WHERE') + ' subcategory = ?';
+      params.push(subcategory);
+    }
+    if (search) {
+      query += (category || subcategory ? ' AND' : ' WHERE') + ' (name LIKE ? OR description LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    const [providers] = await pool.query(query, params);
+    const formattedProviders = providers.map((p) => {
+      let parsedImages = [];
+      try {
+        const rawImages = p.images || '[]';
+        console.log(`Raw images field for provider ${p.id}:`, rawImages);
+        parsedImages = JSON.parse(rawImages);
+        if (!Array.isArray(parsedImages)) {
+          console.warn(`Invalid images format for provider ${p.id}, resetting to empty array`);
+          parsedImages = [];
+        }
+      } catch (e) {
+        console.error(`Error parsing images JSON for provider ${p.id}:`, {
+          error: e.message,
+          rawImages: p.images,
+        });
+        parsedImages = [];
+      }
+      let parsedOpeningHours = {};
+      try {
+        const rawOpeningHours = p.opening_hours || '{}';
+        console.log(`Raw opening_hours field for provider ${p.id}:`, rawOpeningHours);
+        parsedOpeningHours = JSON.parse(rawOpeningHours);
+        if (typeof parsedOpeningHours !== 'object' || Array.isArray(parsedOpeningHours)) {
+          console.warn(`Invalid opening_hours format for provider ${p.id}, resetting to empty object`);
+          parsedOpeningHours = {};
+        }
+      } catch (e) {
+        console.error(`Error parsing opening_hours JSON for provider ${p.id}:`, {
+          error: e.message,
+          rawOpeningHours: p.opening_hours,
+        });
+        parsedOpeningHours = {};
+      }
+      return {
+        id: p.id,
+        userId: p.user_id || undefined,
+        name: p.name,
+        username: p.username,
+        city: p.city,
+        zipCode: p.zip_code || undefined,
+        location: p.location || undefined,
+        phone: p.phone || undefined,
+        email: p.email || undefined,
+        website: p.website || undefined,
+        description: p.description || undefined,
+        images: parsedImages,
+        openingHours: parsedOpeningHours,
+        category: p.category,
+        subcategory: p.subcategory,
+        address: p.address || undefined,
+        isFeatured: !!p.is_featured,
+        createdAt: p.created_at ? p.created_at.toISOString() : new Date().toISOString(),
+        updatedAt: p.updated_at ? p.updated_at.toISOString() : new Date().toISOString(),
+      };
+    });
+    res.status(200).json({ providers: formattedProviders });
+  } catch (error) {
+    console.error('Error fetching providers:', {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// New endpoint for user's own providers
+app.get('/api/user-providers', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const [providers] = await pool.query('SELECT * FROM providers WHERE user_id = ?', [userId]);
+    const formattedProviders = providers.map((p) => {
+      let parsedImages = [];
+      try {
+        const rawImages = p.images || '[]';
+        console.log(`Raw images field for provider ${p.id}:`, rawImages);
+        parsedImages = JSON.parse(rawImages);
+        if (!Array.isArray(parsedImages)) {
+          console.warn(`Invalid images format for provider ${p.id}, resetting to empty array`);
+          parsedImages = [];
+        }
+      } catch (e) {
+        console.error(`Error parsing images JSON for provider ${p.id}:`, {
+          error: e.message,
+          rawImages: p.images,
+        });
+        parsedImages = [];
+      }
+      let parsedOpeningHours = {};
+      try {
+        const rawOpeningHours = p.opening_hours || '{}';
+        console.log(`Raw opening_hours field for provider ${p.id}:`, rawOpeningHours);
+        parsedOpeningHours = JSON.parse(rawOpeningHours);
+        if (typeof parsedOpeningHours !== 'object' || Array.isArray(parsedOpeningHours)) {
+          console.warn(`Invalid opening_hours format for provider ${p.id}, resetting to empty object`);
+          parsedOpeningHours = {};
+        }
+      } catch (e) {
+        console.error(`Error parsing opening_hours JSON for provider ${p.id}:`, {
+          error: e.message,
+          rawOpeningHours: p.opening_hours,
+        });
+        parsedOpeningHours = {};
+      }
+      return {
+        id: p.id,
+        userId: p.user_id || undefined,
+        name: p.name,
+        username: p.username,
+        city: p.city,
+        zipCode: p.zip_code || undefined,
+        location: p.location || undefined,
+        phone: p.phone || undefined,
+        email: p.email || undefined,
+        website: p.website || undefined,
+        description: p.description || undefined,
+        images: parsedImages,
+        openingHours: parsedOpeningHours,
+        category: p.category,
+        subcategory: p.subcategory,
+        address: p.address || undefined,
+        isFeatured: !!p.is_featured,
+        createdAt: p.created_at ? p.created_at.toISOString() : new Date().toISOString(),
+        updatedAt: p.updated_at ? p.updated_at.toISOString() : new Date().toISOString(),
+      };
+    });
+    res.status(200).json({ providers: formattedProviders });
+  } catch (error) {
+    console.error('Error fetching user providers:', {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.get('/api/admin/providers', verifyAdmin, async (req, res) => {
+  try {
+    const [providers] = await pool.query('SELECT * FROM providers');
+    const formattedProviders = providers.map((p) => {
+      let parsedImages = [];
+      try {
+        const rawImages = p.images || '[]';
+        console.log(`Raw images field for provider ${p.id}:`, rawImages);
+        parsedImages = JSON.parse(rawImages);
+        if (!Array.isArray(parsedImages)) {
+          console.warn(`Invalid images format for provider ${p.id}, resetting to empty array`);
+          parsedImages = [];
+        }
+      } catch (e) {
+        console.error(`Error parsing images JSON for provider ${p.id}:`, {
+          error: e.message,
+          rawImages: p.images,
+        });
+        parsedImages = [];
+      }
+      let parsedOpeningHours = {};
+      try {
+        const rawOpeningHours = p.opening_hours || '{}';
+        console.log(`Raw opening_hours field for provider ${p.id}:`, rawOpeningHours);
+        parsedOpeningHours = JSON.parse(rawOpeningHours);
+        if (typeof parsedOpeningHours !== 'object' || Array.isArray(parsedOpeningHours)) {
+          console.warn(`Invalid opening_hours format for provider ${p.id}, resetting to empty object`);
+          parsedOpeningHours = {};
+        }
+      } catch (e) {
+        console.error(`Error parsing opening_hours JSON for provider ${p.id}:`, {
+          error: e.message,
+          rawOpeningHours: p.opening_hours,
+        });
+        parsedOpeningHours = {};
+      }
+      return {
+        id: p.id,
+        userId: p.user_id || undefined,
+        name: p.name,
+        username: p.username,
+        city: p.city,
+        zipCode: p.zip_code || undefined,
+        location: p.location || undefined,
+        phone: p.phone || undefined,
+        email: p.email || undefined,
+        website: p.website || undefined,
+        description: p.description || undefined,
+        images: parsedImages,
+        openingHours: parsedOpeningHours,
+        category: p.category,
+        subcategory: p.subcategory,
+        address: p.address || undefined,
+        isFeatured: !!p.is_featured,
+        createdAt: p.created_at ? p.created_at.toISOString() : new Date().toISOString(),
+        updatedAt: p.updated_at ? p.updated_at.toISOString() : new Date().toISOString(),
+      };
+    });
+    res.status(200).json({ providers: formattedProviders });
+  } catch (error) {
+    console.error('Error fetching providers:', {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Updated to allow users to create their own providers
+app.post('/api/providers', verifyToken, upload.array('images'), [
   body('id').optional().isString(),
   body('name').notEmpty().isString(),
   body('username').notEmpty().isString(),
@@ -341,10 +611,12 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
   const { id, name, username, city, zip_code, phone, email, website, description, category, subcategory, openingHours, location, address, existingImages } = req.body;
   const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
+  const userId = req.user.id;
 
   console.log('Received existingImages for POST:', existingImages);
 
@@ -379,10 +651,10 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
 
   try {
     await pool.query(
-      `INSERT INTO providers (id, name, username, city, zip_code, location, phone, email, website, description, images, opening_hours, category, subcategory, address, is_featured, updated_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      `INSERT INTO providers (id, user_id, name, username, city, zip_code, location, phone, email, website, description, images, opening_hours, category, subcategory, address, is_featured, updated_at) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        id || null, name, username, city, zip_code || null, location || null,
+        id || null, userId, name, username, city, zip_code || null, location || null,
         phone || null, email || null, website || null, description || null,
         JSON.stringify(updatedImages), JSON.stringify(parsedOpeningHours),
         category, subcategory, address || null, 0,
@@ -400,7 +672,8 @@ app.post('/api/admin/providers', verifyAdmin, upload.array('images'), [
   }
 });
 
-app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
+// Updated to restrict to user's own providers or admin
+app.put('/api/providers/:id', verifyUserOrAdmin, upload.array('images'), [
   body('name').notEmpty().isString(),
   body('username').notEmpty().isString(),
   body('city').notEmpty().isString(),
@@ -421,15 +694,14 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
   const { name, username, city, zip_code, phone, email, website, description, category, subcategory, openingHours, location, address, existingImages } = req.body;
   const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
-  // Log the full request payload for debugging
-  console.log('PUT /api/admin/providers/:id request:', {
+  console.log('PUT /api/providers/:id request:', {
     id,
     body: req.body,
     files: req.files ? req.files.map(f => f.filename) : [],
   });
 
   try {
-    const [existingProvider] = await pool.query('SELECT images, opening_hours FROM providers WHERE id = ?', [id]);
+    const [existingProvider] = await pool.query('SELECT * FROM providers WHERE id = ?', [id]);
     if (!existingProvider[0]) {
       console.log(`Provider not found: ${id}`);
       return res.status(404).json({ error: 'Provider not found' });
@@ -437,8 +709,9 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
 
     let currentImages = [];
     try {
-      console.log(`Raw images field for provider ${id}:`, existingProvider[0].images);
-      currentImages = JSON.parse(existingProvider[0].images || '[]');
+      const rawImages = existingProvider[0].images || '[]';
+      console.log(`Raw images field for provider ${id}:`, rawImages);
+      currentImages = JSON.parse(rawImages);
       if (!Array.isArray(currentImages)) {
         console.warn(`Invalid images format for provider ${id}, resetting to empty array`);
         currentImages = [];
@@ -471,8 +744,9 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
 
     let updatedOpeningHours = {};
     try {
-      console.log(`Raw opening_hours field for provider ${id}:`, existingProvider[0].opening_hours);
-      updatedOpeningHours = JSON.parse(existingProvider[0].opening_hours || '{}');
+      const rawOpeningHours = existingProvider[0].opening_hours || '{}';
+      console.log(`Raw opening_hours field for provider ${id}:`, rawOpeningHours);
+      updatedOpeningHours = JSON.parse(rawOpeningHours);
       if (typeof updatedOpeningHours !== 'object' || Array.isArray(updatedOpeningHours)) {
         console.warn(`Invalid opening_hours format for provider ${id}, resetting to empty object`);
         updatedOpeningHours = {};
@@ -497,7 +771,6 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
       }
     }
 
-    // Log the data to be updated
     console.log('Updating provider with data:', {
       name, username, city, zip_code, phone, email, website, description,
       images: JSON.stringify(updatedImages),
@@ -520,7 +793,55 @@ app.put('/api/admin/providers/:id', verifyAdmin, upload.array('images'), [
         return res.status(404).json({ error: 'Provider not found' });
       }
       console.log(`Provider ${id} updated successfully, affected rows: ${result.affectedRows}`);
-      res.status(200).json({ message: 'Provider updated successfully' });
+      
+      const [updatedProvider] = await pool.query('SELECT * FROM providers WHERE id = ?', [id]);
+      const p = updatedProvider[0];
+      let parsedImages = [];
+      try {
+        parsedImages = JSON.parse(p.images || '[]');
+        if (!Array.isArray(parsedImages)) {
+          console.warn(`Invalid images format for provider ${p.id} after update, returning empty array`);
+          parsedImages = [];
+        }
+      } catch (e) {
+        console.error(`Error parsing images JSON for provider ${p.id} after update:`, e.message);
+        parsedImages = [];
+      }
+      let parsedOpeningHours = {};
+      try {
+        parsedOpeningHours = JSON.parse(p.opening_hours || '{}');
+        if (typeof parsedOpeningHours !== 'object' || Array.isArray(parsedOpeningHours)) {
+          console.warn(`Invalid opening_hours format for provider ${p.id} after update, returning empty object`);
+          parsedOpeningHours = {};
+        }
+      } catch (e) {
+        console.error(`Error parsing opening_hours JSON for provider ${p.id} after update:`, e.message);
+        parsedOpeningHours = {};
+      }
+      res.status(200).json({
+        message: 'Provider updated successfully',
+        provider: {
+          id: p.id,
+          userId: p.user_id || undefined,
+          name: p.name,
+          username: p.username,
+          city: p.city,
+          zipCode: p.zip_code || undefined,
+          location: p.location || undefined,
+          phone: p.phone || undefined,
+          email: p.email || undefined,
+          website: p.website || undefined,
+          description: p.description || undefined,
+          images: parsedImages,
+          openingHours: parsedOpeningHours,
+          category: p.category,
+          subcategory: p.subcategory,
+          address: p.address || undefined,
+          isFeatured: !!p.is_featured,
+          createdAt: p.created_at ? p.created_at.toISOString() : new Date().toISOString(),
+          updatedAt: p.updated_at ? p.updated_at.toISOString() : new Date().toISOString(),
+        },
+      });
     } catch (error) {
       console.error('Database update error:', {
         error: error.message,
@@ -566,7 +887,8 @@ app.put('/api/admin/providers/:id/featured', verifyAdmin, [
   }
 });
 
-app.delete('/api/admin/providers/:id', verifyAdmin, async (req, res) => {
+// Updated to restrict to user's own providers or admin
+app.delete('/api/providers/:id', verifyUserOrAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     const [result] = await pool.query('DELETE FROM providers WHERE id = ?', [id]);
@@ -580,9 +902,24 @@ app.delete('/api/admin/providers/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-app.get('/api/admin/offers', verifyAdmin, async (req, res) => {
+app.get('/api/offers', async (req, res) => {
+  const { category, subcategory, search } = req.query;
   try {
-    const [offers] = await pool.query('SELECT * FROM offers');
+    let query = 'SELECT * FROM offers';
+    const params = [];
+    if (category) {
+      query += ' WHERE category = ?';
+      params.push(category);
+    }
+    if (subcategory) {
+      query += (category ? ' AND' : ' WHERE') + ' subcategory = ?';
+      params.push(subcategory);
+    }
+    if (search) {
+      query += (category || subcategory ? ' AND' : ' WHERE') + ' (name LIKE ? OR description LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    const [offers] = await pool.query(query, params);
     const formattedOffers = offers.map((o) => ({
       id: o.id,
       providerId: o.provider_id,
@@ -693,116 +1030,8 @@ app.delete('/api/admin/offers/:id', verifyAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Offer not found' });
     }
     res.status(200).json({ message: 'Offer deleted successfully' });
-  } catch (error) {
+  } offer(error) {
     console.error('Error deleting offer:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/providers', async (req, res) => {
-  const { category, subcategory, search } = req.query;
-  try {
-    let query = 'SELECT * FROM providers';
-    const params = [];
-    if (category) {
-      query += ' WHERE category = ?';
-      params.push(category);
-    }
-    if (subcategory) {
-      query += (category ? ' AND' : ' WHERE') + ' subcategory = ?';
-      params.push(subcategory);
-    }
-    if (search) {
-      query += (category || subcategory ? ' AND' : ' WHERE') + ' (name LIKE ? OR description LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
-    }
-    const [providers] = await pool.query(query, params);
-    const formattedProviders = providers.map((p) => {
-      let parsedImages = [];
-      try {
-        parsedImages = JSON.parse(p.images || '[]');
-        if (!Array.isArray(parsedImages)) {
-          console.warn(`Invalid images format for provider ${p.id}, returning empty array`);
-          parsedImages = [];
-        }
-      } catch (e) {
-        console.error(`Error parsing images JSON for provider ${p.id}:`, e.message);
-        parsedImages = [];
-      }
-      let parsedOpeningHours = {};
-      try {
-        parsedOpeningHours = JSON.parse(p.opening_hours || '{}');
-        if (typeof parsedOpeningHours !== 'object' || Array.isArray(parsedOpeningHours)) {
-          console.warn(`Invalid opening_hours format for provider ${p.id}, returning empty object`);
-          parsedOpeningHours = {};
-        }
-      } catch (e) {
-        console.error(`Error parsing opening_hours JSON for provider ${p.id}:`, e.message);
-        parsedOpeningHours = {};
-      }
-      return {
-        id: p.id,
-        name: p.name,
-        username: p.username,
-        city: p.city,
-        zipCode: p.zip_code || undefined,
-        location: p.location || undefined,
-        phone: p.phone || undefined,
-        email: p.email || undefined,
-        website: p.website || undefined,
-        description: p.description || undefined,
-        images: parsedImages,
-        openingHours: parsedOpeningHours,
-        category: p.category,
-        subcategory: p.subcategory,
-        address: p.address || undefined,
-        isFeatured: !!p.is_featured,
-        createdAt: p.created_at ? p.created_at.toISOString() : new Date().toISOString(),
-        updatedAt: p.updated_at ? p.updated_at.toISOString() : new Date().toISOString(),
-      };
-    });
-    res.status(200).json({ providers: formattedProviders });
-  } catch (error) {
-    console.error('Error fetching providers:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/offers', async (req, res) => {
-  const { category, subcategory, search } = req.query;
-  try {
-    let query = 'SELECT * FROM offers';
-    const params = [];
-    if (category) {
-      query += ' WHERE category = ?';
-      params.push(category);
-    }
-    if (subcategory) {
-      query += (category ? ' AND' : ' WHERE') + ' subcategory = ?';
-      params.push(subcategory);
-    }
-    if (search) {
-      query += (category || subcategory ? ' AND' : ' WHERE') + ' (name LIKE ? OR description LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
-    }
-    const [offers] = await pool.query(query, params);
-    const formattedOffers = offers.map((o) => ({
-      id: o.id,
-      providerId: o.provider_id,
-      name: o.name,
-      description: o.description || undefined,
-      price: parseFloat(o.price),
-      originalPrice: parseFloat(o.original_price),
-      discountedPrice: parseFloat(o.discounted_price),
-      duration: o.duration,
-      category: o.category,
-      subcategory: o.subcategory,
-      image: o.image || undefined,
-      createdAt: o.created_at.toISOString(),
-    }));
-    res.status(200).json({ offers: formattedOffers });
-  } catch (error) {
-    console.error('Error fetching offers:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
