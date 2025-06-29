@@ -8,35 +8,32 @@ import ProviderCard from '../components/providers/ProviderCard';
 
 const HomePage: React.FC = () => {
   const {
-    providers,
-    fetchProviders,
+    featuredProviders,
+    fetchFeaturedProviders,
   } = useProviderStore();
 
   useEffect(() => {
-    fetchProviders();
-  }, [fetchProviders]);
-
-  // Get featured providers (first 3 providers)
-  const featuredProviders = providers.slice(0, 3);
+    fetchFeaturedProviders();
+  }, [fetchFeaturedProviders]);
 
   return (
     <div className="min-h-screen">
       {/* Hero Section with Animated Background Image */}
-      <section className="relative h-screen overflow-hidden"> {/* Added overflow-hidden to constrain image */}
+      <section className="relative h-screen overflow-hidden">
         <div className="absolute inset-0">
           <motion.img 
-            src="directory_background.png" 
+            src="/uploads/directory_background.png" 
             alt="Provider services"
             className="w-full h-full object-cover"
             initial={{ scale: 1 }}
             animate={{ 
-              scale: 1.5, // Zoom to 1.5x for a noticeable effect
+              scale: 1.5,
             }}
             transition={{ 
-              duration: 10, // Slower zoom over 10 seconds
-              ease: "linear", // Linear for smooth continuous motion
-              repeat: Infinity, // Infinite loop
-              repeatType: "loop", // Reset to initial scale after each cycle
+              duration: 10,
+              ease: "linear",
+              repeat: Infinity,
+              repeatType: "loop",
             }}
           />
           <div className="absolute inset-0 bg-black bg-opacity-50"></div>
@@ -137,17 +134,21 @@ const HomePage: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredProviders.map((provider) => (
-              <motion.div
-                key={provider.id}
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-              >
-                <ProviderCard provider={provider} />
-              </motion.div>
-            ))}
+            {featuredProviders.length > 0 ? (
+              featuredProviders.map((provider) => (
+                <motion.div
+                  key={provider.id}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <ProviderCard provider={provider} />
+                </motion.div>
+              ))
+            ) : (
+              <p className="col-span-full text-center text-gray-600">No featured listings available at the moment.</p>
+            )}
           </div>
           
           <div className="mt-12 text-center">
