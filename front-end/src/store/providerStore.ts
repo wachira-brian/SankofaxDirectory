@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 export interface Provider {
   id: string;
+  userId?: string;
   username: string;
   name: string;
   city: string;
@@ -14,8 +15,11 @@ export interface Provider {
   category: string;
   subcategory: string;
   location?: string;
-  isFeatured?: boolean;
+  zipCode?: string;
   address?: string;
+  isFeatured?: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Offer {
@@ -33,12 +37,14 @@ export interface Offer {
 
 interface AdminStore {
   providers: Provider[];
+  userProviders: Provider[];
   offers: Offer[];
   filteredProviders: Provider[];
   filteredOffers: Offer[];
   userCount: number;
   admins: { id: string; name: string; email: string }[];
   fetchProviders: () => Promise<void>;
+  fetchUserProviders: () => Promise<void>;
   fetchOffers: () => Promise<void>;
   fetchUserCount: () => Promise<void>;
   fetchAdmins: () => Promise<void>;
@@ -52,127 +58,226 @@ interface AdminStore {
   setSearchTerm: (term: string) => void;
   setSelectedCategory: (category: string | null) => void;
   applyFilters: () => void;
-  getProviderById: (id: string) => Provider | undefined; // Added getter
-  getOffersByProviderId: (providerId: string) => Offer[]; // Ensure this exists
+  getProviderById: (id: string) => Provider | undefined;
+  getOffersByProviderId: (providerId: string) => Offer[];
   searchTerm: string;
   selectedCategory: string | null;
 }
 
 export const useProviderStore = create<AdminStore>((set, get) => ({
   providers: [],
+  userProviders: [],
   offers: [],
   filteredProviders: [],
   filteredOffers: [],
   userCount: 0,
   admins: [],
   fetchProviders: async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/providers`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-    });
-    if (response.ok) {
-      const data = await response.json();
-      set({ providers: data.providers || [], filteredProviders: data.providers || [] });
-      get().applyFilters(); // Apply filters after fetching
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/providers`);
+      if (response.ok) {
+        const data = await response.json();
+        set({ providers: data.providers || [], filteredProviders: data.providers || [] });
+        get().applyFilters();
+      } else {
+        throw new Error('Failed to fetch providers');
+      }
+    } catch (error) {
+      console.error('Error fetching providers:', error);
+    }
+  },
+  fetchUserProviders: async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/user-providers`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set({ userProviders: data.providers || [] });
+      } else {
+        throw new Error('Failed to fetch user providers');
+      }
+    } catch (error) {
+      console.error('Error fetching user providers:', error);
     }
   },
   fetchOffers: async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/offers`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-    });
-    if (response.ok) {
-      const data = await response.json();
-      set({ offers: data.offers || [], filteredOffers: data.offers || [] });
-      get().applyFilters(); // Apply filters after fetching
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/offers`);
+      if (response.ok) {
+        const data = await response.json();
+        set({ offers: data.offers || [], filteredOffers: data.offers || [] });
+        get().applyFilters();
+      } else {
+        throw new Error('Failed to fetch offers');
+      }
+    } catch (error) {
+      console.error('Error fetching offers:', error);
     }
   },
   fetchUserCount: async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/users/count`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-    });
-    if (response.ok) {
-      const data = await response.json();
-      set({ userCount: data.count });
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/users/count`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set({ userCount: data.count });
+      } else {
+        throw new Error('Failed to fetch user count');
+      }
+    } catch (error) {
+      console.error('Error fetching user count:', error);
     }
   },
   fetchAdmins: async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/admins`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-    });
-    if (response.ok) {
-      const data = await response.json();
-      set({ admins: data.admins });
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/admins`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set({ admins: data.admins });
+      } else {
+        throw new Error('Failed to fetch admins');
+      }
+    } catch (error) {
+      console.error('Error fetching admins:', error);
     }
   },
   createProvider: async (provider: FormData) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/providers`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: provider,
-    });
-    if (!response.ok) throw new Error('Failed to create provider');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/providers`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: provider,
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create provider');
+      }
+      await get().fetchUserProviders(); // Refresh user providers
+    } catch (error) {
+      console.error('Error creating provider:', error);
+      throw error;
+    }
   },
   updateProvider: async (id: string, provider: FormData) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/providers/${id}`, {
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: provider,
-    });
-    if (!response.ok) throw new Error('Failed to update provider');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/providers/${id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: provider,
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update provider');
+      }
+      await get().fetchUserProviders(); // Refresh user providers
+    } catch (error) {
+      console.error('Error updating provider:', error);
+      throw error;
+    }
   },
   deleteProvider: async (id: string) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/providers/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-    });
-    if (!response.ok) throw new Error('Failed to delete provider');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/providers/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete provider');
+      }
+      await get().fetchUserProviders(); // Refresh user providers
+    } catch (error) {
+      console.error('Error deleting provider:', error);
+      throw error;
+    }
   },
   createOffer: async (offer: Partial<Offer>) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/offers`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify(offer),
-    });
-    if (!response.ok) throw new Error('Failed to create offer');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/offers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify(offer),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create offer');
+      }
+      await get().fetchOffers();
+    } catch (error) {
+      console.error('Error creating offer:', error);
+      throw error;
+    }
   },
   updateOffer: async (id: string, offer: Partial<Offer>) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/offers/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify(offer),
-    });
-    if (!response.ok) throw new Error('Failed to update offer');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/offers/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify(offer),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update offer');
+      }
+      await get().fetchOffers();
+    } catch (error) {
+      console.error('Error updating offer:', error);
+      throw error;
+    }
   },
   deleteOffer: async (id: string) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/offers/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-    });
-    if (!response.ok) throw new Error('Failed to delete offer');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/offers/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete offer');
+      }
+      await get().fetchOffers();
+    } catch (error) {
+      console.error('Error deleting offer:', error);
+      throw error;
+    }
   },
   setFeaturedProvider: async (id: string, featured: boolean) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/providers/${id}/featured`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify({ isFeatured: featured }),
-    });
-    if (!response.ok) throw new Error('Failed to update featured status');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/providers/${id}/featured`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ isFeatured: featured }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update featured status');
+      }
+      await get().fetchUserProviders(); // Refresh user providers
+    } catch (error) {
+      console.error('Error updating featured status:', error);
+      throw error;
+    }
   },
   setSearchTerm: (term: string) => {
     set({ searchTerm: term });
-    get().applyFilters(); // Apply filters when search term changes
+    get().applyFilters();
   },
   setSelectedCategory: (category: string | null) => {
     set({ selectedCategory: category });
-    get().applyFilters(); // Apply filters when category changes
+    get().applyFilters();
   },
   applyFilters: () => {
     const { providers, offers, searchTerm, selectedCategory } = get();
